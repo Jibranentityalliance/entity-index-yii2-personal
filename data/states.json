@@ -1,0 +1,1091 @@
+[
+ {
+  "code": "AL",
+  "name": "Alabama",
+  "slug": "alabama",
+  "weight": 1.5,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Birmingham",
+    "county": "Jefferson",
+    "zip3": "352"
+   },
+   {
+    "city": "Huntsville",
+    "county": "Madison",
+    "zip3": "358"
+   },
+   {
+    "city": "Mobile",
+    "county": "Mobile",
+    "zip3": "366"
+   }
+  ]
+ },
+ {
+  "code": "AK",
+  "name": "Alaska",
+  "slug": "alaska",
+  "weight": 0.2,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Anchorage",
+    "county": "Anchorage",
+    "zip3": "995"
+   },
+   {
+    "city": "Fairbanks",
+    "county": "Fairbanks North Star",
+    "zip3": "997"
+   }
+  ]
+ },
+ {
+  "code": "AZ",
+  "name": "Arizona",
+  "slug": "arizona",
+  "weight": 3,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Phoenix",
+    "county": "Maricopa",
+    "zip3": "850"
+   },
+   {
+    "city": "Scottsdale",
+    "county": "Maricopa",
+    "zip3": "852"
+   },
+   {
+    "city": "Tucson",
+    "county": "Pima",
+    "zip3": "857"
+   }
+  ]
+ },
+ {
+  "code": "AR",
+  "name": "Arkansas",
+  "slug": "arkansas",
+  "weight": 0.8,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Little Rock",
+    "county": "Pulaski",
+    "zip3": "722"
+   },
+   {
+    "city": "Fayetteville",
+    "county": "Washington",
+    "zip3": "727"
+   }
+  ]
+ },
+ {
+  "code": "CA",
+  "name": "California",
+  "slug": "california",
+  "weight": 9,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Los Angeles",
+    "county": "Los Angeles",
+    "zip3": "900"
+   },
+   {
+    "city": "San Diego",
+    "county": "San Diego",
+    "zip3": "921"
+   },
+   {
+    "city": "San Jose",
+    "county": "Santa Clara",
+    "zip3": "951"
+   },
+   {
+    "city": "Sacramento",
+    "county": "Sacramento",
+    "zip3": "958"
+   },
+   {
+    "city": "Irvine",
+    "county": "Orange",
+    "zip3": "926"
+   }
+  ]
+ },
+ {
+  "code": "CO",
+  "name": "Colorado",
+  "slug": "colorado",
+  "weight": 2.5,
+  "method": "api",
+  "cities": [
+   {
+    "city": "Denver",
+    "county": "Denver",
+    "zip3": "802"
+   },
+   {
+    "city": "Colorado Springs",
+    "county": "El Paso",
+    "zip3": "809"
+   },
+   {
+    "city": "Boulder",
+    "county": "Boulder",
+    "zip3": "803"
+   }
+  ]
+ },
+ {
+  "code": "CT",
+  "name": "Connecticut",
+  "slug": "connecticut",
+  "weight": 0.9,
+  "method": "api",
+  "cities": [
+   {
+    "city": "Hartford",
+    "county": "Hartford",
+    "zip3": "061"
+   },
+   {
+    "city": "Stamford",
+    "county": "Fairfield",
+    "zip3": "069"
+   },
+   {
+    "city": "New Haven",
+    "county": "New Haven",
+    "zip3": "065"
+   }
+  ]
+ },
+ {
+  "code": "DE",
+  "name": "Delaware",
+  "slug": "delaware",
+  "weight": 5,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Wilmington",
+    "county": "New Castle",
+    "zip3": "198"
+   },
+   {
+    "city": "Dover",
+    "county": "Kent",
+    "zip3": "199"
+   },
+   {
+    "city": "Lewes",
+    "county": "Sussex",
+    "zip3": "199"
+   }
+  ]
+ },
+ {
+  "code": "DC",
+  "name": "District of Columbia",
+  "slug": "district-of-columbia",
+  "weight": 0.5,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Washington",
+    "county": "District of Columbia",
+    "zip3": "200"
+   }
+  ]
+ },
+ {
+  "code": "FL",
+  "name": "Florida",
+  "slug": "florida",
+  "weight": 12,
+  "method": "file",
+  "cities": [
+   {
+    "city": "Miami",
+    "county": "Miami-Dade",
+    "zip3": "331"
+   },
+   {
+    "city": "Fort Lauderdale",
+    "county": "Broward",
+    "zip3": "333"
+   },
+   {
+    "city": "Orlando",
+    "county": "Orange",
+    "zip3": "328"
+   },
+   {
+    "city": "Tampa",
+    "county": "Hillsborough",
+    "zip3": "336"
+   },
+   {
+    "city": "Jacksonville",
+    "county": "Duval",
+    "zip3": "322"
+   },
+   {
+    "city": "Boca Raton",
+    "county": "Palm Beach",
+    "zip3": "334"
+   }
+  ]
+ },
+ {
+  "code": "GA",
+  "name": "Georgia",
+  "slug": "georgia",
+  "weight": 6,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Atlanta",
+    "county": "Fulton",
+    "zip3": "303"
+   },
+   {
+    "city": "Marietta",
+    "county": "Cobb",
+    "zip3": "300"
+   },
+   {
+    "city": "Savannah",
+    "county": "Chatham",
+    "zip3": "314"
+   }
+  ]
+ },
+ {
+  "code": "HI",
+  "name": "Hawaii",
+  "slug": "hawaii",
+  "weight": 0.4,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Honolulu",
+    "county": "Honolulu",
+    "zip3": "968"
+   }
+  ]
+ },
+ {
+  "code": "ID",
+  "name": "Idaho",
+  "slug": "idaho",
+  "weight": 0.9,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Boise",
+    "county": "Ada",
+    "zip3": "837"
+   },
+   {
+    "city": "Meridian",
+    "county": "Ada",
+    "zip3": "836"
+   }
+  ]
+ },
+ {
+  "code": "IL",
+  "name": "Illinois",
+  "slug": "illinois",
+  "weight": 4,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Chicago",
+    "county": "Cook",
+    "zip3": "606"
+   },
+   {
+    "city": "Naperville",
+    "county": "DuPage",
+    "zip3": "605"
+   },
+   {
+    "city": "Springfield",
+    "county": "Sangamon",
+    "zip3": "627"
+   }
+  ]
+ },
+ {
+  "code": "IN",
+  "name": "Indiana",
+  "slug": "indiana",
+  "weight": 1.8,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Indianapolis",
+    "county": "Marion",
+    "zip3": "462"
+   },
+   {
+    "city": "Fort Wayne",
+    "county": "Allen",
+    "zip3": "468"
+   }
+  ]
+ },
+ {
+  "code": "IA",
+  "name": "Iowa",
+  "slug": "iowa",
+  "weight": 0.6,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Des Moines",
+    "county": "Polk",
+    "zip3": "503"
+   },
+   {
+    "city": "Cedar Rapids",
+    "county": "Linn",
+    "zip3": "524"
+   }
+  ]
+ },
+ {
+  "code": "KS",
+  "name": "Kansas",
+  "slug": "kansas",
+  "weight": 0.6,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Wichita",
+    "county": "Sedgwick",
+    "zip3": "672"
+   },
+   {
+    "city": "Overland Park",
+    "county": "Johnson",
+    "zip3": "662"
+   }
+  ]
+ },
+ {
+  "code": "KY",
+  "name": "Kentucky",
+  "slug": "kentucky",
+  "weight": 1,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Louisville",
+    "county": "Jefferson",
+    "zip3": "402"
+   },
+   {
+    "city": "Lexington",
+    "county": "Fayette",
+    "zip3": "405"
+   }
+  ]
+ },
+ {
+  "code": "LA",
+  "name": "Louisiana",
+  "slug": "louisiana",
+  "weight": 1.3,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "New Orleans",
+    "county": "Orleans",
+    "zip3": "701"
+   },
+   {
+    "city": "Baton Rouge",
+    "county": "East Baton Rouge",
+    "zip3": "708"
+   }
+  ]
+ },
+ {
+  "code": "ME",
+  "name": "Maine",
+  "slug": "maine",
+  "weight": 0.3,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Portland",
+    "county": "Cumberland",
+    "zip3": "041"
+   }
+  ]
+ },
+ {
+  "code": "MD",
+  "name": "Maryland",
+  "slug": "maryland",
+  "weight": 2,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Baltimore",
+    "county": "Baltimore City",
+    "zip3": "212"
+   },
+   {
+    "city": "Rockville",
+    "county": "Montgomery",
+    "zip3": "208"
+   }
+  ]
+ },
+ {
+  "code": "MA",
+  "name": "Massachusetts",
+  "slug": "massachusetts",
+  "weight": 1.8,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Boston",
+    "county": "Suffolk",
+    "zip3": "021"
+   },
+   {
+    "city": "Worcester",
+    "county": "Worcester",
+    "zip3": "016"
+   },
+   {
+    "city": "Cambridge",
+    "county": "Middlesex",
+    "zip3": "021"
+   }
+  ]
+ },
+ {
+  "code": "MI",
+  "name": "Michigan",
+  "slug": "michigan",
+  "weight": 3,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Detroit",
+    "county": "Wayne",
+    "zip3": "482"
+   },
+   {
+    "city": "Grand Rapids",
+    "county": "Kent",
+    "zip3": "495"
+   },
+   {
+    "city": "Ann Arbor",
+    "county": "Washtenaw",
+    "zip3": "481"
+   }
+  ]
+ },
+ {
+  "code": "MN",
+  "name": "Minnesota",
+  "slug": "minnesota",
+  "weight": 1.3,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Minneapolis",
+    "county": "Hennepin",
+    "zip3": "554"
+   },
+   {
+    "city": "Saint Paul",
+    "county": "Ramsey",
+    "zip3": "551"
+   }
+  ]
+ },
+ {
+  "code": "MS",
+  "name": "Mississippi",
+  "slug": "mississippi",
+  "weight": 0.8,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Jackson",
+    "county": "Hinds",
+    "zip3": "392"
+   },
+   {
+    "city": "Gulfport",
+    "county": "Harrison",
+    "zip3": "395"
+   }
+  ]
+ },
+ {
+  "code": "MO",
+  "name": "Missouri",
+  "slug": "missouri",
+  "weight": 1.8,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Kansas City",
+    "county": "Jackson",
+    "zip3": "641"
+   },
+   {
+    "city": "St. Louis",
+    "county": "St. Louis City",
+    "zip3": "631"
+   }
+  ]
+ },
+ {
+  "code": "MT",
+  "name": "Montana",
+  "slug": "montana",
+  "weight": 0.7,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Billings",
+    "county": "Yellowstone",
+    "zip3": "591"
+   },
+   {
+    "city": "Bozeman",
+    "county": "Gallatin",
+    "zip3": "597"
+   }
+  ]
+ },
+ {
+  "code": "NE",
+  "name": "Nebraska",
+  "slug": "nebraska",
+  "weight": 0.5,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Omaha",
+    "county": "Douglas",
+    "zip3": "681"
+   },
+   {
+    "city": "Lincoln",
+    "county": "Lancaster",
+    "zip3": "685"
+   }
+  ]
+ },
+ {
+  "code": "NV",
+  "name": "Nevada",
+  "slug": "nevada",
+  "weight": 3,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Las Vegas",
+    "county": "Clark",
+    "zip3": "891"
+   },
+   {
+    "city": "Henderson",
+    "county": "Clark",
+    "zip3": "890"
+   },
+   {
+    "city": "Reno",
+    "county": "Washoe",
+    "zip3": "895"
+   }
+  ]
+ },
+ {
+  "code": "NH",
+  "name": "New Hampshire",
+  "slug": "new-hampshire",
+  "weight": 0.5,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Manchester",
+    "county": "Hillsborough",
+    "zip3": "031"
+   },
+   {
+    "city": "Nashua",
+    "county": "Hillsborough",
+    "zip3": "030"
+   }
+  ]
+ },
+ {
+  "code": "NJ",
+  "name": "New Jersey",
+  "slug": "new-jersey",
+  "weight": 3,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Newark",
+    "county": "Essex",
+    "zip3": "071"
+   },
+   {
+    "city": "Jersey City",
+    "county": "Hudson",
+    "zip3": "073"
+   },
+   {
+    "city": "Princeton",
+    "county": "Mercer",
+    "zip3": "085"
+   }
+  ]
+ },
+ {
+  "code": "NM",
+  "name": "New Mexico",
+  "slug": "new-mexico",
+  "weight": 0.7,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Albuquerque",
+    "county": "Bernalillo",
+    "zip3": "871"
+   },
+   {
+    "city": "Santa Fe",
+    "county": "Santa Fe",
+    "zip3": "875"
+   }
+  ]
+ },
+ {
+  "code": "NY",
+  "name": "New York",
+  "slug": "new-york",
+  "weight": 6,
+  "method": "api",
+  "cities": [
+   {
+    "city": "New York",
+    "county": "New York",
+    "zip3": "100"
+   },
+   {
+    "city": "Brooklyn",
+    "county": "Kings",
+    "zip3": "112"
+   },
+   {
+    "city": "Buffalo",
+    "county": "Erie",
+    "zip3": "142"
+   },
+   {
+    "city": "Albany",
+    "county": "Albany",
+    "zip3": "122"
+   }
+  ]
+ },
+ {
+  "code": "NC",
+  "name": "North Carolina",
+  "slug": "north-carolina",
+  "weight": 3.5,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Charlotte",
+    "county": "Mecklenburg",
+    "zip3": "282"
+   },
+   {
+    "city": "Raleigh",
+    "county": "Wake",
+    "zip3": "276"
+   },
+   {
+    "city": "Durham",
+    "county": "Durham",
+    "zip3": "277"
+   }
+  ]
+ },
+ {
+  "code": "ND",
+  "name": "North Dakota",
+  "slug": "north-dakota",
+  "weight": 0.2,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Fargo",
+    "county": "Cass",
+    "zip3": "581"
+   }
+  ]
+ },
+ {
+  "code": "OH",
+  "name": "Ohio",
+  "slug": "ohio",
+  "weight": 3.5,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Columbus",
+    "county": "Franklin",
+    "zip3": "432"
+   },
+   {
+    "city": "Cleveland",
+    "county": "Cuyahoga",
+    "zip3": "441"
+   },
+   {
+    "city": "Cincinnati",
+    "county": "Hamilton",
+    "zip3": "452"
+   }
+  ]
+ },
+ {
+  "code": "OK",
+  "name": "Oklahoma",
+  "slug": "oklahoma",
+  "weight": 1.2,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Oklahoma City",
+    "county": "Oklahoma",
+    "zip3": "731"
+   },
+   {
+    "city": "Tulsa",
+    "county": "Tulsa",
+    "zip3": "741"
+   }
+  ]
+ },
+ {
+  "code": "OR",
+  "name": "Oregon",
+  "slug": "oregon",
+  "weight": 1.1,
+  "method": "api",
+  "cities": [
+   {
+    "city": "Portland",
+    "county": "Multnomah",
+    "zip3": "972"
+   },
+   {
+    "city": "Eugene",
+    "county": "Lane",
+    "zip3": "974"
+   },
+   {
+    "city": "Bend",
+    "county": "Deschutes",
+    "zip3": "977"
+   }
+  ]
+ },
+ {
+  "code": "PA",
+  "name": "Pennsylvania",
+  "slug": "pennsylvania",
+  "weight": 3,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Philadelphia",
+    "county": "Philadelphia",
+    "zip3": "191"
+   },
+   {
+    "city": "Pittsburgh",
+    "county": "Allegheny",
+    "zip3": "152"
+   }
+  ]
+ },
+ {
+  "code": "RI",
+  "name": "Rhode Island",
+  "slug": "rhode-island",
+  "weight": 0.3,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Providence",
+    "county": "Providence",
+    "zip3": "029"
+   }
+  ]
+ },
+ {
+  "code": "SC",
+  "name": "South Carolina",
+  "slug": "south-carolina",
+  "weight": 2,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Charleston",
+    "county": "Charleston",
+    "zip3": "294"
+   },
+   {
+    "city": "Columbia",
+    "county": "Richland",
+    "zip3": "292"
+   },
+   {
+    "city": "Greenville",
+    "county": "Greenville",
+    "zip3": "296"
+   }
+  ]
+ },
+ {
+  "code": "SD",
+  "name": "South Dakota",
+  "slug": "south-dakota",
+  "weight": 0.4,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Sioux Falls",
+    "county": "Minnehaha",
+    "zip3": "571"
+   }
+  ]
+ },
+ {
+  "code": "TN",
+  "name": "Tennessee",
+  "slug": "tennessee",
+  "weight": 2,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Nashville",
+    "county": "Davidson",
+    "zip3": "372"
+   },
+   {
+    "city": "Memphis",
+    "county": "Shelby",
+    "zip3": "381"
+   },
+   {
+    "city": "Knoxville",
+    "county": "Knox",
+    "zip3": "379"
+   }
+  ]
+ },
+ {
+  "code": "TX",
+  "name": "Texas",
+  "slug": "texas",
+  "weight": 10,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Houston",
+    "county": "Harris",
+    "zip3": "770"
+   },
+   {
+    "city": "Dallas",
+    "county": "Dallas",
+    "zip3": "752"
+   },
+   {
+    "city": "Austin",
+    "county": "Travis",
+    "zip3": "787"
+   },
+   {
+    "city": "San Antonio",
+    "county": "Bexar",
+    "zip3": "782"
+   },
+   {
+    "city": "Fort Worth",
+    "county": "Tarrant",
+    "zip3": "761"
+   }
+  ]
+ },
+ {
+  "code": "UT",
+  "name": "Utah",
+  "slug": "utah",
+  "weight": 1.8,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Salt Lake City",
+    "county": "Salt Lake",
+    "zip3": "841"
+   },
+   {
+    "city": "Provo",
+    "county": "Utah",
+    "zip3": "846"
+   },
+   {
+    "city": "Lehi",
+    "county": "Utah",
+    "zip3": "840"
+   }
+  ]
+ },
+ {
+  "code": "VT",
+  "name": "Vermont",
+  "slug": "vermont",
+  "weight": 0.2,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Burlington",
+    "county": "Chittenden",
+    "zip3": "054"
+   }
+  ]
+ },
+ {
+  "code": "VA",
+  "name": "Virginia",
+  "slug": "virginia",
+  "weight": 2.5,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Richmond",
+    "county": "Richmond City",
+    "zip3": "232"
+   },
+   {
+    "city": "Virginia Beach",
+    "county": "Virginia Beach City",
+    "zip3": "234"
+   },
+   {
+    "city": "Arlington",
+    "county": "Arlington",
+    "zip3": "222"
+   }
+  ]
+ },
+ {
+  "code": "WA",
+  "name": "Washington",
+  "slug": "washington",
+  "weight": 2.5,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Seattle",
+    "county": "King",
+    "zip3": "981"
+   },
+   {
+    "city": "Bellevue",
+    "county": "King",
+    "zip3": "980"
+   },
+   {
+    "city": "Spokane",
+    "county": "Spokane",
+    "zip3": "992"
+   }
+  ]
+ },
+ {
+  "code": "WV",
+  "name": "West Virginia",
+  "slug": "west-virginia",
+  "weight": 0.3,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Charleston",
+    "county": "Kanawha",
+    "zip3": "253"
+   }
+  ]
+ },
+ {
+  "code": "WI",
+  "name": "Wisconsin",
+  "slug": "wisconsin",
+  "weight": 1.2,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Milwaukee",
+    "county": "Milwaukee",
+    "zip3": "532"
+   },
+   {
+    "city": "Madison",
+    "county": "Dane",
+    "zip3": "537"
+   }
+  ]
+ },
+ {
+  "code": "WY",
+  "name": "Wyoming",
+  "slug": "wyoming",
+  "weight": 4,
+  "method": "tbd",
+  "cities": [
+   {
+    "city": "Cheyenne",
+    "county": "Laramie",
+    "zip3": "820"
+   },
+   {
+    "city": "Sheridan",
+    "county": "Sheridan",
+    "zip3": "828"
+   },
+   {
+    "city": "Casper",
+    "county": "Natrona",
+    "zip3": "826"
+   }
+  ]
+ }
+]

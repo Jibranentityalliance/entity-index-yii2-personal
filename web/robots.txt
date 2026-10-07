@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /search
+Disallow: /portal/
+
+Sitemap: https://entityindex.com/sitemap.xml

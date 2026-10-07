@@ -1,0 +1,91 @@
+<?php
+
+namespace app\models;
+
+use Yii;
+use yii\db\ActiveRecord;
+use yii\web\IdentityInterface;
+
+/**
+ * Portal account.
+ *
+ * @property int $id
+ * @property string $email
+ * @property string|null $name
+ * @property string $password_hash
+ * @property string $auth_key
+ * @property string $role     customer | admin
+ * @property string $plan     free | pro | business | bulk
+ * @property int $status      10 active, 0 disabled
+ * @property string|null $last_login_at
+ * @property string $created_at
+ * @property string $updated_at
+ */
+class User extends ActiveRecord implements IdentityInterface
+{
+    public const STATUS_ACTIVE = 10;
+    public const STATUS_DISABLED = 0;
+    public const ROLE_CUSTOMER = 'customer';
+    public const ROLE_ADMIN = 'admin';
+
+    public static function tableName()
+    {
+        return 'user';
+    }
+
+    public function beforeSave($insert)
+    {
+        $now = gmdate('Y-m-d H:i:s');
+        if ($insert) {
+            $this->created_at = $now;
+            $this->auth_key = $this->auth_key ?: Yii::$app->security->generateRandomString(32);
+        }
+        $this->updated_at = $now;
+        return parent::beforeSave($insert);
+    }
+
+    public static function findIdentity($id)
+    {
+        return static::findOne(['id' => $id, 'status' => self::STATUS_ACTIVE]);
+    }
+
+    public static function findIdentityByAccessToken($token, $type = null)
+    {
+        return null; // API keys arrive in a later phase
+    }
+
+    public static function findByEmail(string $email): ?self
+    {
+        return static::findOne(['email' => $email, 'status' => self::STATUS_ACTIVE]);
+    }
+
+    public function getId()
+    {
+        return $this->id;
+    }
+
+    public function getAuthKey()
+    {
+        return $this->auth_key;
+    }
+
+    public function validateAuthKey($authKey)
+    {
+        return hash_equals((string) $this->auth_key, (string) $authKey);
+    }
+
+    public function setPassword(string $password): void
+    {
+        $this->password_hash = Yii::$app->security->generatePasswordHash($password);
+    }
+
+    public function validatePassword(string $password): bool
+    {
+        return Yii::$app->security->validatePassword($password, $this->password_hash);
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === self::ROLE_ADMIN;
+    }
+}
