@@ -42,6 +42,7 @@ Not built yet: saved searches, CSV export, API keys / API v1, billing (pricing p
 | `DB_DSN`, `DB_USER`, `DB_PASS` | MySQL connection |
 | `COOKIE_VALIDATION_KEY` | long random string |
 | `SITE_URL` | canonical URL used in sitemaps, canonical links, JSON-LD |
+| `SITE_NOINDEX` | `true` (default): meta robots tag + `X-Robots-Tag: noindex, nofollow` on every response. Set `false` at launch |
 | `SITE_MODE` | `live`, or `coming_soon` to show only the waitlist page (opt-out, legal pages and the form APIs stay reachable) |
 
 Prices and plan copy live in `config/params.php` (`tiers`).
@@ -62,10 +63,14 @@ data/              states.json, sample/entities.json
 tests/run.php      integration tests
 ```
 
+## Deployment
+
+Pushes to `main` deploy automatically over SFTP after the tests pass: see **Automatic deploys** in [docs/DEPLOY.md](docs/DEPLOY.md). The deploy never touches `.env`, `config/db.php`, `runtime/` or `web/assets/` on the server.
+
 ## Tests
 
 `tests/run.php` boots the app on PHP's built-in server against a **throwaway** database (it runs `migrate/fresh`, which drops every table there) and checks
-public pages, search, redirects, sitemaps, both forms (incl. CSRF and honeypot), portal register/login/logout/password change/lockout, admin dashboard and the coming-soon gate.
+public pages, search, redirects, sitemaps, noindex tags and headers, both forms (incl. CSRF and honeypot), portal register/login/logout/password change/lockout, admin dashboard and the coming-soon gate.
 
 ```bash
 TEST_DB_DSN="mysql:host=127.0.0.1;dbname=entityindex_test" TEST_DB_USER=root TEST_DB_PASS= composer test

@@ -46,6 +46,14 @@ $config = [
                 ['class' => \yii\log\FileTarget::class, 'levels' => ['error', 'warning']],
             ],
         ],
+        'response' => [
+            'on beforeSend' => function ($event) {
+                // noindex for every response (HTML, JSON, XML, redirects, errors).
+                if (Yii::$app->params['noindex']) {
+                    $event->sender->headers->set('X-Robots-Tag', 'noindex, nofollow');
+                }
+            },
+        ],
         'assetManager' => [
             // jQuery and Bootstrap are loaded from CDNs (see assets/AppAsset.php), not from bower/npm packages.
             'bundles' => [

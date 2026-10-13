@@ -33,3 +33,43 @@ jobs:
           TEST_DB_USER: root
           TEST_DB_PASS: root
         run: php tests/run.php
+
+  deploy:
+    # Deploys to the production server over SFTP after the tests pass on main. See docs/DEPLOY.md.
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, intl, pdo_mysql
+      - name: Install production dependencies
+        run: composer install --no-dev --no-interaction --no-progress --prefer-dist --optimize-autoloader
+      - name: Install lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends lftp rsync
+      - name: Deploy over SFTP
+        env:
+          SFTP_HOST: ${{ secrets.SFTP_HOST }}
+          SFTP_PORT: ${{ secrets.SFTP_PORT }}
+          SFTP_USERNAME: ${{ secrets.SFTP_USERNAME }}
+          SFTP_REMOTE_PATH: ${{ secrets.SFTP_REMOTE_PATH }}
+          SFTP_PRIVATE_KEY: ${{ secrets.SFTP_PRIVATE_KEY }}
+          SFTP_KNOWN_HOSTS: ${{ secrets.SFTP_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          for v in SFTP_HOST SFTP_USERNAME SFTP_REMOTE_PATH SFTP_PRIVATE_KEY SFTP_KNOWN_HOSTS; do
+            [ -n "${!v}" ] || { echo "::error::Secret $v is not set (Settings > Environments > production)"; exit 1; }
+          done
+          KEYDIR="$(mktemp -d)"
+          trap 'rm -rf "$KEYDIR"' EXIT
+          printf '%s\n' "$SFTP_PRIVATE_KEY" > "$KEYDIR/key"
+          printf '%s\n' "$SFTP_KNOWN_HOSTS" > "$KEYDIR/known_hosts"
+          chmod 600 "$KEYDIR/key"
+          export SFTP_KEY_FILE="$KEYDIR/key" SFTP_KNOWN_HOSTS_FILE="$KEYDIR/known_hosts"
+          bash scripts/deploy-sftp.sh

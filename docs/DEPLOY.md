@@ -46,6 +46,7 @@ DB_PASS=<strong password>
 COOKIE_VALIDATION_KEY=<output of: php -r 'echo bin2hex(random_bytes(32));'>
 SITE_URL=https://entityindex.com
 SITE_MODE=coming_soon          # switch to live at launch
+SITE_NOINDEX=true              # keep search engines out until launch (default); set false to allow indexing
 ```
 
 `chmod 600 .env`. Never commit it. (Apache `SetEnv` / php-fpm `env[]` also work and take precedence over `.env`.)
@@ -100,10 +101,60 @@ HTTPS: `sudo /opt/bitnami/bncert-tool` (Let's Encrypt, sets up the redirect) or 
 ## 8. Launch checklist
 
 1. `SITE_MODE=coming_soon` until the real data pipeline is loading; check `/coming-soon`, `/opt-out`, `/legal/terms`.
-2. Switch to `SITE_MODE=live`, `php yii cache/flush-all`.
-3. Submit `https://entityindex.com/sitemap.xml` in Google Search Console. `web/robots.txt` hard-codes the sitemap URL for entityindex.com; edit it if the domain differs.
+2. Switch to `SITE_MODE=live`, **and `SITE_NOINDEX=false` when you want search engines in** (until then every page has `<meta name="robots" content="noindex,nofollow">` and an `X-Robots-Tag` header), then `php yii cache/flush-all`.
+3. Add the `Sitemap:` line back to `web/robots.txt` and submit `https://entityindex.com/sitemap.xml` in Google Search Console. `web/robots.txt` hard-codes the sitemap URL for entityindex.com; edit it if the domain differs.
 4. Replace the placeholder text on `/legal/privacy` and `/legal/terms` (they are draft outlines).
 5. Configure real outgoing mail (`components.mailer` in `config/web.php`) before adding features that send email.
+
+## Automatic deploys (GitHub Actions → SFTP)
+
+Every push to `main` runs the tests (`ci.yml`, job `test`) and, if they pass, the `deploy` job uploads the site over SFTP with a private key
+(`scripts/deploy-sftp.sh`, built on `lftp`). Pull requests only run the tests.
+
+**What the deploy does**
+- Uploads the application code and **deletes files on the server that no longer exist in the repo** (inside the uploaded folders).
+- Uploads `vendor/` only when `composer.lock` changed (the hash is kept in `.deploy-vendor-hash` on the server).
+- **Never touches** `.env*`, `config/db.php`, `runtime/` and `web/assets/`: those belong to the server. `config/db.php` is not deployed at all;
+  put it on the server once by hand (copy the repo's file, it reads `DB_*` from `.env`) and change it there if you ever need to.
+- Does not upload `tests/`, `docs/`, `scripts/`, `.git*`, `.github/`, `data/sample/`.
+- **Cannot run commands** (SFTP only). After a release that adds a migration, SSH in and run `php yii migrate --interactive=0 && php yii cache/flush-all`.
+
+**One-time server setup (Debian)**
+
+```bash
+# 1. deploy user + key (on your laptop)
+ssh-keygen -t ed25519 -f entityindex_deploy -N "" -C "github-actions-deploy"
+
+# 2. on the server
+sudo adduser --disabled-password --gecos "" deploy
+sudo -u deploy mkdir -p /home/deploy/.ssh && sudo -u deploy chmod 700 /home/deploy/.ssh
+cat entityindex_deploy.pub | sudo -u deploy tee -a /home/deploy/.ssh/authorized_keys   # then chmod 600 the file
+sudo mkdir -p /var/www/entityindex && sudo chown deploy:www-data /var/www/entityindex
+sudo chmod 2775 /var/www/entityindex                      # new files inherit the www-data group
+# first deploy creates runtime/ and web/assets/ as the deploy user; let Apache write to them:
+sudo chmod -R g+rwX /var/www/entityindex/runtime /var/www/entityindex/web/assets   # after the first deploy
+# put .env and config/db.php in place (see sections 3 and 4 above)
+```
+
+Apache (Debian): `DocumentRoot /var/www/entityindex/web`, `AllowOverride All`, `a2enmod rewrite headers`, run Apache as `www-data`. Make sure the
+`deploy` user's umask gives group write (`umask 002` in its `~/.profile`) so files uploaded later stay readable by Apache.
+
+**GitHub setup** — repo *Settings → Environments → New environment* named `production` (optionally add required reviewers), then add these *environment secrets*:
+
+| Secret | Value |
+|---|---|
+| `SFTP_HOST` | server hostname or Elastic IP |
+| `SFTP_PORT` | SSH port (leave empty for 22) |
+| `SFTP_USERNAME` | `deploy` |
+| `SFTP_PRIVATE_KEY` | full contents of `entityindex_deploy` (the private key, including the BEGIN/END lines) |
+| `SFTP_KNOWN_HOSTS` | output of `ssh-keyscan -p 22 your.host` run from a machine you trust (pins the server's host key; the deploy fails if it changes) |
+| `SFTP_REMOTE_PATH` | `/var/www/entityindex` (absolute project root; its `web/` is the DocumentRoot) |
+
+The AWS security group must allow SSH (22) from GitHub's runners, which have no fixed IPs. Either allow 22 from anywhere and rely on key-only login
+(`PasswordAuthentication no`), or allow GitHub's published ranges (`https://api.github.com/meta` → `actions`).
+
+**Try it safely first:** run the script by hand with `DEPLOY_DRY_RUN=1` (lists changes, uploads nothing):
+`composer install --no-dev -o && SFTP_HOST=… SFTP_USERNAME=deploy SFTP_KEY_FILE=~/.ssh/entityindex_deploy SFTP_KNOWN_HOSTS_FILE=./known_hosts SFTP_REMOTE_PATH=/var/www/entityindex DEPLOY_DRY_RUN=1 bash scripts/deploy-sftp.sh`
 
 ## Updating
 

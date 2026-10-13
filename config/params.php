@@ -6,6 +6,8 @@ return [
     'senderName' => 'EntityIndex',
     'siteUrl' => rtrim((string) env('SITE_URL', 'https://entityindex.com'), '/'),
     'siteMode' => env('SITE_MODE', 'live'), // live | coming_soon
+    // Tell search engines not to index anything (meta tag + X-Robots-Tag header). Set SITE_NOINDEX=false at launch.
+    'noindex' => filter_var(env('SITE_NOINDEX', true), FILTER_VALIDATE_BOOLEAN),
     'sitemapPageSize' => 50000,
 
     // Proposed prices — change here; the pricing page and home page read from this list.

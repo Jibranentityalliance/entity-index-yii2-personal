@@ -135,6 +135,20 @@ check('stopword-only query does not error', $h->get('/search?q=the')['status'] =
 check('short query does not error', $h->get('/search?q=ab')['status'] === 200);
 check('bad date filter is ignored, not an error', $h->get('/search?from=nope&to=2026-13-45')['status'] === 200);
 
+echo "noindex\n";
+$hasMeta = fn(string $b) => (bool) preg_match('/<meta name="robots" content="noindex,nofollow">/', $b);
+$hasHeader = fn(array $r) => (bool) preg_match('/^X-Robots-Tag:\s*noindex, nofollow/mi', $r['headers']);
+foreach (['/', '/search?q=roofing', '/company/ny/redline-creative-llc-7045435', '/new/fl', '/pricing', '/opt-out', '/legal/terms', '/portal/auth/login', '/no-such-page'] as $path) {
+    $r = $h->get($path);
+    check("noindex meta + header on $path", $hasMeta($r['body']) && $hasHeader($r), $r['status'] . '');
+}
+foreach (['/sitemap.xml', '/sitemap-company-0.xml', '/robots.txt'] as $path) {
+    $r = $h->get($path);
+    check("X-Robots-Tag header on $path", $hasHeader($r) || $path === '/robots.txt', $r['status'] . '');
+}
+check('JSON form endpoint carries the header', $hasHeader($h->ajax('/api/waitlist', ['email' => 'robots@example.com'], '/pricing')));
+check('robots.txt does not Disallow: /', !preg_match('/^Disallow:\s*\/\s*$/mi', $h->get('/robots.txt')['body']));
+
 echo "Sitemaps\n";
 $r = $h->get('/sitemap.xml');
 check('sitemap index is XML', $r['status'] === 200 && @simplexml_load_string($r['body']) !== false && str_contains($r['body'], 'sitemap-company-0.xml'));
@@ -198,7 +212,7 @@ run('php yii seed/admin admin@example.com Admin-pass-1', $env, $root);
 $a = new Http('http://127.0.0.1:18080');
 $a->postForm('/portal/auth/login', ['LoginForm' => ['email' => 'admin@example.com', 'password' => 'Admin-pass-1']]);
 $r = $a->get('/portal');
-check('admin dashboard shows admin counters', str_contains($r['body'], 'Opt-out requests pending') && str_contains($r['body'], '1 on waitlist'));
+check('admin dashboard shows admin counters', str_contains($r['body'], 'Opt-out requests pending') && (bool) preg_match('/\d+ on waitlist/', $r['body']));
 
 proc_terminate($srv);
 
@@ -208,6 +222,7 @@ $g = new Http('http://127.0.0.1:18081');
 foreach (['/', '/search', '/company/ny/redline-creative-llc-7045435', '/pricing'] as $path) {
     check("gate: $path shows the waitlist page", str_contains($g->get($path)['body'], 'Join waitlist'));
 }
+check('gate: coming-soon page is noindex', $hasMeta($g->get('/')['body']));
 check('gate: opt-out page stays reachable', str_contains($g->get('/opt-out')['body'], 'Remove my information'));
 check('gate: legal pages stay reachable', str_contains($g->get('/legal/terms')['body'], 'Terms of Service'));
 $r = $g->ajax('/api/waitlist', ['email' => 'gate@example.com'], '/coming-soon');

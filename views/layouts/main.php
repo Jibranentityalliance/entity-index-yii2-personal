@@ -22,8 +22,10 @@ $this->registerLinkTag(['rel' => 'icon', 'type' => 'image/svg+xml', 'href' => Yi
 if (!empty($this->params['canonical'])) {
     $this->registerLinkTag(['rel' => 'canonical', 'href' => Fmt::canonical($this->params['canonical'])]);
 }
-if (!empty($this->params['noindex'])) {
-    $this->registerMetaTag(['name' => 'robots', 'content' => 'noindex,follow']);
+if (Yii::$app->params['noindex']) {
+    $this->registerMetaTag(['name' => 'robots', 'content' => 'noindex,nofollow']); // site-wide switch (SITE_NOINDEX)
+} elseif (!empty($this->params['noindex'])) {
+    $this->registerMetaTag(['name' => 'robots', 'content' => 'noindex,follow']);    // per-page (search results, legal drafts)
 }
 $title = $this->title ? $this->title . ' | EntityIndex' : 'EntityIndex — New US business filings, searchable within 24 hours';
 ?>

@@ -1,7 +1,4 @@
+# Indexing is blocked with noindex tags / X-Robots-Tag headers (SITE_NOINDEX), not with Disallow:
+# crawlers must be allowed to fetch pages to see the noindex directive.
 User-agent: *
 Allow: /
-Disallow: /api/
-Disallow: /search
-Disallow: /portal/
-
-Sitemap: https://entityindex.com/sitemap.xml
