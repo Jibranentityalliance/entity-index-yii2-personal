@@ -49,7 +49,17 @@ SITE_MODE=coming_soon          # switch to live at launch
 SITE_NOINDEX=true              # keep search engines out until launch (default); set false to allow indexing
 ```
 
-`chmod 600 .env`. Never commit it. (Apache `SetEnv` / php-fpm `env[]` also work and take precedence over `.env`.)
+**Permissions matter.** The web server runs as a different user than the one who created the file. With mode 600 the site cannot read `.env`, and every
+setting looks missing. Use `sudo chown deploy:www-data .env && sudo chmod 640 .env` (Debian; `daemon` instead of `www-data` on Bitnami). Never commit it.
+Wrap any value that contains spaces, `#` or `$` in double quotes (`DB_PASS="p#ss word"`). Apache `SetEnv` / php-fpm `env[]` also work and take precedence over `.env`.
+To keep the file outside the project folder, set the real environment variable `ENV_FILE=/etc/entityindex/env`.
+
+**Required settings** (the site refuses to start without them, with a clear message): `DB_DSN`, `DB_USER`, `COOKIE_VALIDATION_KEY`, `SITE_URL`.
+`DB_PASS` may be empty. `SITE_MODE` (default `live`) and `SITE_NOINDEX` (default `true`) have safe defaults.
+
+**Check it:** `php yii env/check` shows which settings are present (never their values), whether `.env` is readable by the user you are running as,
+whether the database connects, and whether `runtime/` and `web/assets/` are writable. Run it as the web user for the real answer:
+`sudo -u www-data php yii env/check`.
 
 ## 4. Schema, reference data, first admin
 
@@ -171,7 +181,8 @@ php yii cache/flush-all
 | Symptom | Likely cause |
 |---|---|
 | Home page works, other URLs 404 | `mod_rewrite` off or `AllowOverride None` without the rewrite rules in the vhost |
-| 500 error, nothing on screen | check `runtime/logs/app.log` and the Apache error log; usually `.env` unreadable or `runtime/` not writable |
+| "Configuration error" page | a required setting is missing or `.env` is unreadable/unparsable. The page (in debug) and `runtime/logs/config-error.log` say which; run `sudo -u www-data php yii env/check` |
+| "An internal server error occurred." | an exception inside the app; the real message is in `runtime/logs/app.log` (set `YII_DEBUG=true` briefly if you need stack traces). Typical causes: database credentials/DSN wrong, `runtime/` not writable, migrations not run |
 | "Unable to verify your data submission" | cookies blocked, or `COOKIE_VALIDATION_KEY` changed since the form was loaded |
 | Search returns nothing for a short word | words under 3 characters use `LIKE`; longer words match at the start of a word (FULLTEXT prefix) |
 | Pages show no styling | the server cannot reach the CDNs (jsDelivr, cdnjs, code.jquery.com) |

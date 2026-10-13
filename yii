@@ -5,7 +5,17 @@
  */
 
 require __DIR__ . '/vendor/autoload.php';
-require __DIR__ . '/config/env.php';
+
+try {
+    require __DIR__ . '/config/env.php';
+    // `php yii env/check` must run even when settings are missing: it is the tool that reports them.
+    if (!str_starts_with($_SERVER['argv'][1] ?? '', 'env/')) {
+        envAssertRequired();
+    }
+} catch (Throwable $e) {
+    envFail($e, true);
+}
+
 require __DIR__ . '/vendor/yiisoft/yii2/Yii.php';
 
 $config = require __DIR__ . '/config/console.php';

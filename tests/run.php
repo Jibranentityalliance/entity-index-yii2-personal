@@ -254,6 +254,51 @@ check('admin dashboard shows admin counters', str_contains($r['body'], 'opt-out 
 
 proc_terminate($srv);
 
+echo "Configuration errors\n";
+/** Environment for a subprocess: the test settings minus $drop, plus $add. */
+$envWithout = function (array $drop = [], array $add = []) use ($env) {
+    $e = array_diff_key($env, array_flip($drop)) + $add;
+    return array_intersect_key($e, array_flip(['PATH', 'HOME'])) + array_filter($e, fn($k) => !in_array($k, ['PATH', 'HOME'], true), ARRAY_FILTER_USE_KEY);
+};
+$capture = function (string $cmd, array $e) use ($root): array {
+    $p = proc_open($cmd, [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, $root, $e);
+    $out = stream_get_contents($pipes[1]) . stream_get_contents($pipes[2]);
+    return [proc_close($p), $out];
+};
+$base = ['PATH' => getenv('PATH') ?: '/usr/bin:/bin', 'ENV_FILE' => '/nonexistent/.env'] + $env; // never read the developer's real .env here
+$required = ['DB_DSN', 'DB_USER', 'COOKIE_VALIDATION_KEY', 'SITE_URL'];
+[$code, $out] = $capture('php yii env/check', array_diff_key($base, array_flip($required)) + ['DB_PASS' => 'SECRET-PASS-123']);
+check('env/check fails and names every missing required setting', $code === 1 && str_contains($out, 'DB_DSN') && str_contains($out, 'COOKIE_VALIDATION_KEY') && str_contains($out, 'MISSING'), "exit $code");
+check('env/check never prints secret values', !str_contains($out, 'SECRET-PASS-123') && !str_contains($out, $env['COOKIE_VALIDATION_KEY']));
+[$code, $out] = $capture('php yii env/check', $base);
+check('env/check passes with every setting present and the DB reachable', $code === 0 && str_contains($out, 'All good') && str_contains($out, 'Database: connected'), "exit $code");
+[$code, $out] = $capture('php yii migrate/up --interactive=0', array_diff_key($base, ['DB_DSN' => 1]));
+check('console commands refuse to run without DB_DSN, with a clear message', $code === 1 && str_contains($out, 'DB_DSN'), "exit $code");
+
+@unlink("$root/runtime/logs/config-error.log");
+$srvA = startServer(18082, ['YII_DEBUG' => 'true'] + array_diff_key($base, ['COOKIE_VALIDATION_KEY' => 1]), $root);
+$a = new Http('http://127.0.0.1:18082');
+$r = $a->get('/');
+check('missing COOKIE_VALIDATION_KEY (debug): 500 with a message naming it', $r['status'] === 500 && str_contains($r['body'], 'Configuration error') && str_contains($r['body'], 'COOKIE_VALIDATION_KEY'), $r['status'] . '');
+check('config failure is written to runtime/logs/config-error.log', str_contains((string) @file_get_contents("$root/runtime/logs/config-error.log"), 'COOKIE_VALIDATION_KEY'));
+proc_terminate($srvA);
+$srvB = startServer(18083, array_diff_key($base, ['DB_DSN' => 1, 'YII_DEBUG' => 1]), $root);
+$b = new Http('http://127.0.0.1:18083');
+$r = $b->get('/');
+check('missing DB_DSN (prod): 500 with a generic pointer, no setting names or values', $r['status'] === 500 && str_contains($r['body'], 'env/check') && !str_contains($r['body'], 'DB_DSN') && !str_contains($r['body'], $env['DB_USER'] . '@'), $r['status'] . '');
+proc_terminate($srvB);
+$srvC = startServer(18084, array_diff_key($base, ['SITE_NOINDEX' => 1, 'SITE_MODE' => 1]), $root);
+$c = new Http('http://127.0.0.1:18084');
+$r = $c->get('/features');
+check('SITE_NOINDEX unset still means noindex (fail-safe default)', $r['status'] === 200 && $hasHeader($r) && $hasMeta($r['body']));
+proc_terminate($srvC);
+$srvD = startServer(18085, ['SITE_NOINDEX' => 'false'] + $base, $root);
+$d = new Http('http://127.0.0.1:18085');
+$r = $d->get('/features');
+check('SITE_NOINDEX=false makes the site indexable', $r['status'] === 200 && !$hasHeader($r) && !str_contains($r['body'], 'content="noindex'));
+proc_terminate($srvD);
+@unlink("$root/runtime/logs/config-error.log");
+
 echo "Coming-soon gate\n";
 $srv2 = startServer(18081, array_merge($env, ['SITE_MODE' => 'coming_soon']), $root);
 $g = new Http('http://127.0.0.1:18081');

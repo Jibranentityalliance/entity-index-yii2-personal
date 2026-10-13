@@ -22,7 +22,7 @@ $config = [
     ],
     'components' => [
         'request' => [
-            'cookieValidationKey' => env('COOKIE_VALIDATION_KEY', 'dev-only-insecure-key-change-me'),
+            'cookieValidationKey' => envRequired('COOKIE_VALIDATION_KEY'),
         ],
         'cache' => [
             'class' => \yii\caching\FileCache::class,

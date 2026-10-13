@@ -1,13 +1,13 @@
 <?php
 
 return [
-    'adminEmail' => env('ADMIN_EMAIL', 'admin@entityindex.com'),
-    'senderEmail' => env('ADMIN_EMAIL', 'admin@entityindex.com'),
+    'adminEmail' => env('ADMIN_EMAIL', 'admin@localhost'),
+    'senderEmail' => env('ADMIN_EMAIL', 'admin@localhost'),
     'senderName' => 'EntityIndex',
-    'siteUrl' => rtrim((string) env('SITE_URL', 'https://entityindex.com'), '/'),
+    'siteUrl' => rtrim((string) env('SITE_URL'), '/'), // required: checked at boot by envAssertRequired()
     'siteMode' => env('SITE_MODE', 'live'), // live | coming_soon
     // Tell search engines not to index anything (meta tag + X-Robots-Tag header). Set SITE_NOINDEX=false at launch.
-    'noindex' => filter_var(env('SITE_NOINDEX', true), FILTER_VALIDATE_BOOLEAN),
+    'noindex' => envBool('SITE_NOINDEX', true), // fail-safe: stays ON unless explicitly set to false
 
     // Proposed prices — change here; the pricing page and home page read from this list.
     'tiers' => [

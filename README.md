@@ -52,11 +52,15 @@ Not built yet: saved searches, CSV export, API keys / API v1, billing (Stripe is
 | Variable | Meaning |
 |---|---|
 | `YII_ENV`, `YII_DEBUG` | `prod` / `false` in production (default is prod) |
-| `DB_DSN`, `DB_USER`, `DB_PASS` | MySQL connection |
-| `COOKIE_VALIDATION_KEY` | long random string |
-| `SITE_URL` | canonical URL used in sitemaps, canonical links, JSON-LD |
+| `DB_DSN`, `DB_USER` | **required**: MySQL connection |
+| `DB_PASS` | MySQL password (may be empty) |
+| `COOKIE_VALIDATION_KEY` | **required**: long random string |
+| `SITE_URL` | **required**: canonical URL used in sitemaps, canonical links, JSON-LD |
+| `ENV_FILE` | optional (real environment only): path of the env file, default `./.env` |
 | `SITE_NOINDEX` | `true` (default): meta robots tag + `X-Robots-Tag: noindex, nofollow` on every response. Set `false` at launch |
 | `SITE_MODE` | `live`, or `coming_soon` to show only the waitlist page (opt-out, legal pages and the form APIs stay reachable) |
+
+The site will not start if a required setting is missing: it shows a "Configuration error" page, logs the cause to `runtime/logs/config-error.log`, and `php yii env/check` lists what is missing (never printing values). `.env` must be readable by the web server user (`chmod 640`, group `www-data`).
 
 Prices and plan copy live in `config/params.php` (`tiers`).
 
