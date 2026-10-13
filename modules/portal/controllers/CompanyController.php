@@ -1,16 +1,15 @@
 <?php
 
-namespace app\controllers;
+namespace app\modules\portal\controllers;
 
 use app\helpers\Fmt;
 use app\helpers\States;
 use app\services\EntityRepository;
-use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 
-class CompanyController extends Controller
+class CompanyController extends PortalController
 {
-    /** /company/{state}/{slug}-{urlkey}; the key (last segment) identifies the record, the slug is cosmetic. */
+    /** /portal/company/{state}/{slug}-{urlkey}; the key (last segment) identifies the record, the slug is cosmetic. */
     public function actionView(string $state, string $slug)
     {
         $st = States::resolve($state);
@@ -22,6 +21,9 @@ class CompanyController extends Controller
         if ($state !== strtolower($st['code']) || $slug !== $e->slug . '-' . $e->url_key) {
             return $this->redirect(Fmt::entityUrl($e->attributes), 308);
         }
-        return $this->render('view', ['e' => $e, 'st' => $st, 'related' => EntityRepository::related($e, 8)]);
+        return $this->render('view', [
+            'e' => $e, 'st' => $st, 'related' => EntityRepository::related($e, 8),
+            'full' => \Yii::$app->user->identity->hasFullAccess(),
+        ]);
     }
 }

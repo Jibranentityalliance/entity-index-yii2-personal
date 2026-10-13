@@ -54,7 +54,7 @@ SITE_NOINDEX=true              # keep search engines out until launch (default);
 ## 4. Schema, reference data, first admin
 
 ```bash
-php yii migrate --interactive=0
+php yii migrate --interactive=0        # includes the contact_messages table
 php yii seed/states                      # the 51 jurisdictions. Do NOT run seed/sample in production: it is fake data and truncates entities.
 php yii seed/admin you@entityindex.com '<long password>'
 ```

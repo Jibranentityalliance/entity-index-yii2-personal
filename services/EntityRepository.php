@@ -139,13 +139,6 @@ class EntityRepository
         return (int) self::remember('ei.total', fn() => (new Query())->from('entities')->count());
     }
 
-    /** Stable, paged list for sitemaps. */
-    public static function sitemapPage(int $offset, int $limit): array
-    {
-        return (new Query())->select(['state', 'url_key', 'slug', 'indexed_at'])->from('entities')
-            ->orderBy(['id' => SORT_ASC])->offset($offset)->limit($limit)->all();
-    }
-
     public static function find(string $state, string $urlKey): ?Entity
     {
         return Entity::find()->where(['state' => strtoupper($state), 'url_key' => strtolower($urlKey)])

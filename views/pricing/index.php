@@ -9,12 +9,7 @@ use yii\helpers\Url;
 $this->title = 'Pricing — alerts, API and bulk data';
 $this->params['description'] = 'Search free. Pro alerts and exports from $49/month. API from $299/month. Daily bulk files for data teams.';
 $this->params['canonical'] = '/pricing';
-$faq = [
-    ['Where does the data come from?', 'Directly from each state’s business registry: official open-data APIs and daily bulk files where available, the state website otherwise. Every record shows its state filing number and when we pulled it.'],
-    ['How fresh is it?', 'Our target is every new filing searchable within 24 hours of the state record. The Coverage page shows the live median lag for every state.'],
-    ['Do you include phone numbers and emails?', 'Records include what the state publishes: names, registered agent and addresses. Contact enrichment will be an optional add-on, and buyers must follow TCPA and CAN-SPAM rules.'],
-    ['Can I resell the data?', 'Not on Pro or Business. Redistribution needs a Data license.'],
-];
+$faq = array_slice(require Yii::getAlias('@app/config/faq.php'), 0, 4);
 ?>
 <div class="container">
     <div class="page-head text-center pt-5">
@@ -75,9 +70,9 @@ Authorization: Bearer ei_live_…
     </section>
 
     <section class="section prose">
-        <h2>Questions</h2>
+        <div class="section-head"><h2>Questions</h2><span class="ms-auto"></span><a href="<?= Url::to(['/site/faq']) ?>">All FAQs →</a></div>
         <div class="faq">
-            <?php foreach ($faq as [$q, $a]): ?>
+            <?php foreach ($faq as [$cat, $q, $a]): ?>
                 <details><summary><?= Html::encode($q) ?></summary><p class="text-muted"><?= Html::encode($a) ?></p></details>
             <?php endforeach ?>
         </div>

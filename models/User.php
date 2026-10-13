@@ -84,6 +84,12 @@ class User extends ActiveRecord implements IdentityInterface
         return Yii::$app->security->validatePassword($password, $this->password_hash);
     }
 
+    /** Paid plans and admins see full records (officers, addresses). */
+    public function hasFullAccess(): bool
+    {
+        return $this->isAdmin() || in_array($this->plan, ['pro', 'business', 'bulk'], true);
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === self::ROLE_ADMIN;

@@ -27,12 +27,23 @@ The real ingestion pipeline that fills `entities`, `people`, `filings`, … is a
 
 ## Pages
 
-Public (no login): `/` · `/search` · `/company/{state}/{slug}-{filing-key}` · `/new` · `/new/{state}` · `/states` · `/pricing` · `/opt-out` · `/legal/privacy` · `/legal/terms` · `/coming-soon` · `/sitemap.xml` · `/robots.txt`
-Forms (AJAX, CSRF-protected): `POST /api/waitlist`, `POST /api/opt-out`
+**Public** (Bootstrap 5, no login): `/` landing · `/features` · `/pricing` · `/faq` · `/about` · `/contact` · `/legal/terms` · `/legal/privacy` · `/opt-out` · `/coming-soon` · `/sitemap.xml` · `/robots.txt`
+Forms (AJAX, CSRF-protected, honeypot): `POST /api/waitlist`, `POST /api/opt-out`, `POST /api/contact`
 
-**Portal** (`modules/portal`, AdminLTE, login required): `/portal` dashboard · `/portal/account` profile + password ·
-`/portal/auth/login` · `/portal/auth/register` · `/portal/auth/logout` (POST). Admin users (`php yii seed/admin`) also see waitlist and opt-out counters.
-Not built yet: saved searches, CSV export, API keys / API v1, billing (pricing page is static, Stripe is a placeholder), admin queues.
+**Portal** (`modules/portal`, AdminLTE 3, login required for everything except the auth pages):
+
+| Route | Page |
+|---|---|
+| `/portal` | dashboard: stats, quick search, newest filings, jurisdictions grid (admins also see waitlist / opt-out / contact counters) |
+| `/portal/search` | search with filters |
+| `/portal/company/{state}/{slug}-{filing-key}` | company record (officers and addresses are visible on paid plans and to admins, locked on Free) |
+| `/portal/new`, `/portal/new/{state}` | new filings by day / by state |
+| `/portal/states` | coverage and freshness per jurisdiction |
+| `/portal/account` | profile and password |
+| `/portal/auth/login`, `/portal/auth/register`, `/portal/auth/logout` (POST) | authentication |
+
+`php yii seed/admin you@example.com 'password'` creates an admin. Paid plans are set on the `user.plan` column (`free|pro|business|bulk`) until billing exists.
+Not built yet: saved searches, CSV export, API keys / API v1, billing (Stripe is a placeholder), usage limits, admin queues for contact / opt-out / waitlist.
 
 ## Configuration (`.env` or real environment variables; real env wins)
 
@@ -50,10 +61,10 @@ Prices and plan copy live in `config/params.php` (`tiers`).
 ## Layout
 
 ```
-config/            web.php, console.php, params.php, env.php (.env loader), dev-router.php
-controllers/       public controllers (Site, Search, Company, New, States, Pricing, OptOut, Legal, Forms, Sitemap)
-modules/portal/    logged-in area: controllers, models (login/register/account forms), AdminLTE views + layouts
-models/            ActiveRecord: Entity, Person, Filing, RegisteredAgent, Source, User, Waitlist, OptOutRequest
+config/            web.php, console.php, params.php, faq.php, env.php (.env loader), dev-router.php
+controllers/       public controllers (Site, Pricing, OptOut, Legal, Forms, Sitemap)
+modules/portal/    logged-in product: controllers (Default, Search, Company, New, States, Account, Auth), forms, AdminLTE views + layouts
+models/            ActiveRecord: Entity, Person, Filing, RegisteredAgent, Source, User, Waitlist, OptOutRequest, ContactMessage
 services/          EntityRepository: search, daily lists, per-state stats, related companies
 helpers/           Fmt (dates, URLs, badges), States (51 jurisdictions)
 migrations/        MySQL schema (replaces the old Postgres db/schema.sql)
@@ -70,7 +81,7 @@ Pushes to `main` deploy automatically over SFTP after the tests pass: see **Auto
 ## Tests
 
 `tests/run.php` boots the app on PHP's built-in server against a **throwaway** database (it runs `migrate/fresh`, which drops every table there) and checks
-public pages, search, redirects, sitemaps, noindex tags and headers, both forms (incl. CSRF and honeypot), portal register/login/logout/password change/lockout, admin dashboard and the coming-soon gate.
+public pages, the login wall in front of every product route, search, redirects, plan-based gating on company pages, noindex tags and headers, the sitemap, both forms (incl. CSRF and honeypot), portal register/login/logout/password change/lockout, admin dashboard and the coming-soon gate.
 
 ```bash
 TEST_DB_DSN="mysql:host=127.0.0.1;dbname=entityindex_test" TEST_DB_USER=root TEST_DB_PASS= composer test
@@ -84,4 +95,4 @@ CI (`.github/workflows/ci.yml`) runs the same script against MySQL 8.0.
 - **Caching:** ISR (`revalidate`) became Yii data cache (5 minutes for counters and per-state stats). Run `php yii cache/flush-all` after bulk loads.
 - **Dates:** stored as UTC `DATETIME`; shown in America/New_York where a time is displayed.
 - **Assets:** jQuery, Bootstrap and AdminLTE come from CDNs (jsDelivr, cdnjs, code.jquery.com). `composer.json` therefore replaces the `bower-asset/*` packages so Composer does not need asset-packagist.
-- **Sitemaps:** `/sitemap.xml` is a sitemap index pointing at `/sitemap-company-{n}.xml` (50,000 URLs each; file 0 also holds the static and state pages).
+- **Access:** the product (search, company pages, daily feed, coverage) is behind login in the portal; only marketing and legal pages are public, so `/sitemap.xml` lists just those.

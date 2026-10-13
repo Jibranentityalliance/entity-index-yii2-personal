@@ -5,7 +5,6 @@
 
 use app\assets\AppAsset;
 use app\helpers\Fmt;
-use app\helpers\States;
 use yii\helpers\Html;
 use yii\helpers\Url;
 
@@ -51,21 +50,18 @@ $title = $this->title ? $this->title . ' | EntityIndex' : 'EntityIndex — New U
             </button>
             <div class="collapse navbar-collapse" id="mainNav">
                 <ul class="navbar-nav me-auto">
-                    <li class="nav-item"><a class="nav-link" href="<?= Url::to(['/new/index']) ?>">New filings</a></li>
-                    <li class="nav-item"><a class="nav-link" href="<?= Url::to(['/states/index']) ?>">States</a></li>
-                    <li class="nav-item"><a class="nav-link" href="<?= Url::to(['/pricing/index']) ?>">Pricing</a></li>
-                    <li class="nav-item"><a class="nav-link" href="<?= Url::to(['/pricing/index', '#' => 'api']) ?>">API</a></li>
+                    <?php foreach ([['Features', ['/site/features']], ['Pricing', ['/pricing/index']], ['FAQ', ['/site/faq']], ['About', ['/site/about']], ['Contact', ['/site/contact']]] as [$label, $route]): ?>
+                        <li class="nav-item"><a class="nav-link<?= Yii::$app->controller->route === ltrim($route[0], '/') ? ' active' : '' ?>" href="<?= Url::to($route) ?>"><?= $label ?></a></li>
+                    <?php endforeach ?>
                 </ul>
-                <form action="<?= Url::to(['/search/index']) ?>" class="d-flex me-lg-3 my-2 my-lg-0" role="search">
-                    <label for="hq" class="visually-hidden">Search companies</label>
-                    <input id="hq" class="form-control form-control-sm" name="q" type="search" placeholder="Search company, officer or filing #">
-                </form>
-                <?php if (Yii::$app->user->isGuest): ?>
-                    <a class="btn btn-link btn-sm text-decoration-none me-2" href="<?= Url::to(['/portal/auth/login']) ?>">Sign in</a>
-                <?php else: ?>
-                    <a class="btn btn-link btn-sm text-decoration-none me-2" href="<?= Url::to(['/portal/default/index']) ?>">Portal</a>
-                <?php endif ?>
-                <a class="btn btn-ei btn-sm" href="<?= Url::to(['/pricing/index']) ?>">Get alerts</a>
+                <div class="d-flex align-items-center gap-2 mt-3 mt-lg-0">
+                    <?php if (Yii::$app->user->isGuest): ?>
+                        <a class="btn btn-link btn-sm text-decoration-none" href="<?= Url::to(['/portal/auth/login']) ?>">Sign in</a>
+                        <a class="btn btn-ei btn-sm" href="<?= Url::to(['/portal/auth/register']) ?>">Get started</a>
+                    <?php else: ?>
+                        <a class="btn btn-ei btn-sm" href="<?= Url::to(['/portal/default/index']) ?>">Open portal</a>
+                    <?php endif ?>
+                </div>
             </div>
         </div>
     </nav>
@@ -80,39 +76,35 @@ $title = $this->title ? $this->title . ' | EntityIndex' : 'EntityIndex — New U
         <div class="row g-4">
             <div class="col-lg-5">
                 <a class="logo" href="<?= Url::to(['/site/index']) ?>">EntityIndex</a>
-                <p class="text-muted small mt-2" style="max-width:320px">New business entities from all 50 states and DC, searchable within 24 hours of filing. Every record links back to the official state source.</p>
-            </div>
-            <div class="col-6 col-lg-2">
-                <h4>Data</h4>
-                <ul class="list-unstyled">
-                    <li><a href="<?= Url::to(['/new/index']) ?>">New filings today</a></li>
-                    <li><a href="<?= Url::to(['/states/index']) ?>">Coverage &amp; freshness</a></li>
-                    <li><a href="<?= Url::to(['/search/index']) ?>">Search</a></li>
-                </ul>
+                <p class="text-muted small mt-2" style="max-width:340px">New business entities from all 50 states and DC, searchable within 24 hours of filing. Every record links back to the official state source.</p>
             </div>
             <div class="col-6 col-lg-2">
                 <h4>Product</h4>
                 <ul class="list-unstyled">
+                    <li><a href="<?= Url::to(['/site/features']) ?>">Features</a></li>
                     <li><a href="<?= Url::to(['/pricing/index']) ?>">Pricing</a></li>
-                    <li><a href="<?= Url::to(['/pricing/index', '#' => 'api']) ?>">API</a></li>
-                    <li><a href="<?= Url::to(['/pricing/index', '#' => 'bulk']) ?>">Bulk data</a></li>
+                    <li><a href="<?= Url::to(['/portal/auth/register']) ?>">Create account</a></li>
+                    <li><a href="<?= Url::to(['/portal/auth/login']) ?>">Sign in</a></li>
+                </ul>
+            </div>
+            <div class="col-6 col-lg-2">
+                <h4>Company</h4>
+                <ul class="list-unstyled">
+                    <li><a href="<?= Url::to(['/site/about']) ?>">About</a></li>
+                    <li><a href="<?= Url::to(['/site/faq']) ?>">FAQ</a></li>
+                    <li><a href="<?= Url::to(['/site/contact']) ?>">Contact</a></li>
                 </ul>
             </div>
             <div class="col-6 col-lg-3">
-                <h4>Company</h4>
+                <h4>Legal</h4>
                 <ul class="list-unstyled">
+                    <li><a href="<?= Url::to(['/legal/terms']) ?>">Terms of Service</a></li>
+                    <li><a href="<?= Url::to(['/legal/privacy']) ?>">Privacy Policy</a></li>
                     <li><a href="<?= Url::to(['/opt-out/index']) ?>">Remove my information</a></li>
-                    <li><a href="<?= Url::to(['/legal/terms']) ?>">Terms</a></li>
-                    <li><a href="<?= Url::to(['/legal/privacy']) ?>">Privacy</a></li>
                 </ul>
             </div>
         </div>
-        <nav class="footer-states" aria-label="New businesses by state">
-            <?php foreach (States::all() as $s): ?>
-                <a href="<?= Fmt::stateUrl($s['code']) ?>"><?= Html::encode($s['name']) ?></a>
-            <?php endforeach ?>
-        </nav>
-        <p class="text-muted small mt-3 mb-0">© <?= date('Y') ?> EntityIndex. Public-record data provided as is, without warranty. Not affiliated with any state agency.</p>
+        <p class="text-muted small mt-4 mb-0">© <?= date('Y') ?> EntityIndex. Public-record data provided as is, without warranty. Not affiliated with any state agency.</p>
     </div>
 </footer>
 

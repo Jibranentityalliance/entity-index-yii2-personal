@@ -107,54 +107,46 @@ run('php yii seed/all', $env, $root);
 $srv = startServer(18080, $env, $root);
 $h = new Http('http://127.0.0.1:18080');
 echo "Public pages\n";
-foreach (['/' => 'Every new US business', '/search?q=roofing&state=FL' => 'Results for', '/new' => 'New business filings', '/new/fl' => 'New Florida businesses',
-    '/states' => 'Coverage', '/pricing' => 'Priced for teams', '/opt-out' => 'Remove my information', '/legal/privacy' => 'Privacy Policy', '/legal/terms' => 'Terms of Service'] as $path => $needle) {
+foreach (['/' => 'Every new US business', '/features' => 'Features', '/pricing' => 'Priced for teams', '/faq' => 'Frequently asked questions',
+    '/about' => 'About EntityIndex', '/contact' => 'Contact us', '/opt-out' => 'Remove my information', '/legal/privacy' => 'Privacy Policy', '/legal/terms' => 'Terms of Service'] as $path => $needle) {
     $r = $h->get($path);
     check("GET $path is 200", $r['status'] === 200, (string) $r['status']);
     check("GET $path contains '$needle'", str_contains($r['body'], $needle));
 }
-$r = $h->get('/new/florida');
-check('/new/florida redirects to /new/fl (308)', $r['status'] === 308 && str_ends_with((string) $r['location'], '/new/fl'), $r['status'] . ' ' . $r['location']);
-check('unknown state is 404', $h->get('/new/zz')['status'] === 404);
+$home = $h->get('/')['body'];
+check('home links to sign-in and register', str_contains($home, '/portal/auth/login') && str_contains($home, '/portal/auth/register'));
+check('home shows no company data (names or filing links)', !str_contains($home, '/portal/company/') && !str_contains($home, 'Redline Creative'));
+check('contact topic preselects from the query string', str_contains($h->get('/contact?topic=sales')['body'], 'value="sales" selected'));
 check('unknown path is 404', $h->get('/no-such-page')['status'] === 404);
 
-echo "Company pages and search\n";
-$r = $h->get('/search?q=7045435');
-check('filing number search finds Redline Creative LLC', str_contains($r['body'], 'Redline Creative LLC') && str_contains($r['body'], '1 company'));
-preg_match('#href="(/company/ny/redline-creative-llc-7045435)"#', $r['body'], $m);
-check('search result links to the company page', isset($m[1]));
-$r = $h->get('/company/ny/redline-creative-llc-7045435');
-check('company page 200', $r['status'] === 200);
-check('company page has canonical + JSON-LD', str_contains($r['body'], 'rel="canonical"') && str_contains($r['body'], 'application/ld+json'));
-$r = $h->get('/company/new-york/old-name-7045435');
-check('old slug / full state name redirects (308)', $r['status'] === 308 && str_ends_with((string) $r['location'], '/company/ny/redline-creative-llc-7045435'), $r['status'] . ' ' . $r['location']);
-check('unknown company is 404', $h->get('/company/ny/nothing-0000000')['status'] === 404);
-$all = $h->get('/search')['body'];
-check('empty search lists everything (6,000 companies)', str_contains($all, '6,000 companies'));
-check('stopword-only query does not error', $h->get('/search?q=the')['status'] === 200);
-check('short query does not error', $h->get('/search?q=ab')['status'] === 200);
-check('bad date filter is ignored, not an error', $h->get('/search?from=nope&to=2026-13-45')['status'] === 200);
+echo "Product pages are not public\n";
+foreach (['/search', '/search?q=roofing', '/company/ny/redline-creative-llc-7045435', '/new', '/new/fl', '/states'] as $path) {
+    check("old public URL $path is gone (404)", $h->get($path)['status'] === 404);
+}
+foreach (['/portal', '/portal/search', '/portal/search?q=roofing', '/portal/company/ny/redline-creative-llc-7045435', '/portal/new', '/portal/new/fl', '/portal/states', '/portal/account'] as $path) {
+    $r = $h->get($path);
+    check("anonymous $path redirects to login", $r['status'] === 302 && str_contains((string) $r['location'], '/portal/auth/login'), $r['status'] . ' ' . $r['location']);
+}
 
 echo "noindex\n";
 $hasMeta = fn(string $b) => (bool) preg_match('/<meta name="robots" content="noindex,nofollow">/', $b);
 $hasHeader = fn(array $r) => (bool) preg_match('/^X-Robots-Tag:\s*noindex, nofollow/mi', $r['headers']);
-foreach (['/', '/search?q=roofing', '/company/ny/redline-creative-llc-7045435', '/new/fl', '/pricing', '/opt-out', '/legal/terms', '/portal/auth/login', '/no-such-page'] as $path) {
+foreach (['/', '/features', '/pricing', '/faq', '/about', '/contact', '/opt-out', '/legal/terms', '/portal/auth/login', '/portal/auth/register', '/no-such-page'] as $path) {
     $r = $h->get($path);
     check("noindex meta + header on $path", $hasMeta($r['body']) && $hasHeader($r), $r['status'] . '');
 }
-foreach (['/sitemap.xml', '/sitemap-company-0.xml', '/robots.txt'] as $path) {
+foreach (['/sitemap.xml', '/robots.txt'] as $path) {
     $r = $h->get($path);
     check("X-Robots-Tag header on $path", $hasHeader($r) || $path === '/robots.txt', $r['status'] . '');
 }
 check('JSON form endpoint carries the header', $hasHeader($h->ajax('/api/waitlist', ['email' => 'robots@example.com'], '/pricing')));
 check('robots.txt does not Disallow: /', !preg_match('/^Disallow:\s*\/\s*$/mi', $h->get('/robots.txt')['body']));
 
-echo "Sitemaps\n";
+echo "Sitemap\n";
 $r = $h->get('/sitemap.xml');
-check('sitemap index is XML', $r['status'] === 200 && @simplexml_load_string($r['body']) !== false && str_contains($r['body'], 'sitemap-company-0.xml'));
-$r = $h->get('/sitemap-company-0.xml');
-check('company sitemap lists company URLs', $r['status'] === 200 && substr_count($r['body'], '/company/') >= 6000);
-check('out-of-range sitemap is 404', $h->get('/sitemap-company-5.xml')['status'] === 404);
+check('sitemap is XML listing the public pages', $r['status'] === 200 && @simplexml_load_string($r['body']) !== false && str_contains($r['body'], '/features') && str_contains($r['body'], '/pricing'));
+check('sitemap lists no portal or company URLs', !str_contains($r['body'], '/portal') && !str_contains($r['body'], '/company/'));
+check('company sitemap files are gone', $h->get('/sitemap-company-0.xml')['status'] === 404);
 
 echo "Forms\n";
 $r = $h->ajax('/api/waitlist', ['email' => 'test@example.com', 'plan' => 'pro', 'use_case' => 'Other', 'website' => ''], '/pricing');
@@ -170,6 +162,15 @@ $r = $h->ajax('/api/opt-out', ['entity_ref' => 'http://x/y', 'person_name' => 'J
 check('opt-out request accepted', $r['status'] === 200);
 $r = $h->ajax('/api/opt-out', ['entity_ref' => '', 'person_name' => '', 'email' => 'x'], '/opt-out');
 check('opt-out validates required fields (400)', $r['status'] === 400);
+$r = $h->ajax('/api/contact', ['name' => 'Pat Doe', 'email' => 'pat@example.com', 'topic' => 'sales', 'message' => 'Do you cover Wyoming?', 'website' => ''], '/contact');
+check('contact message accepted', $r['status'] === 200 && str_contains($r['body'], '"ok":true'));
+$r = $h->ajax('/api/contact', ['name' => 'Pat', 'email' => 'bad', 'message' => 'short'], '/contact');
+check('contact validates email and message length (400)', $r['status'] === 400);
+$r = $h->ajax('/api/contact', ['name' => 'Bot', 'email' => 'bot@example.com', 'message' => 'Buy cheap pills now', 'website' => 'http://spam'], '/contact');
+check('contact honeypot looks successful', $r['status'] === 200);
+check('contact POST without CSRF is rejected', $h->req('POST', '/api/contact', ['name' => 'x', 'email' => 'x@example.com', 'message' => 'no csrf token here'])['status'] === 400);
+$pdo = new PDO($dsn, getenv('TEST_DB_USER') ?: 'root', getenv('TEST_DB_PASS') ?: '');
+check('only the real contact message was stored', (int) $pdo->query("SELECT COUNT(*) FROM contact_messages")->fetchColumn() === 1);
 
 echo "Portal\n";
 $p = new Http('http://127.0.0.1:18080');
@@ -183,7 +184,38 @@ check('register rejects mismatched passwords', $r['status'] === 200 && str_conta
 $r = $p->postForm('/portal/auth/register', ['RegisterForm' => ['name' => 'Test User', 'email' => 'user@example.com', 'password' => 'password1', 'password_repeat' => 'password1']]);
 check('register succeeds and redirects to the dashboard', $r['status'] === 302 && str_ends_with((string) $r['location'], '/portal'), $r['status'] . ' ' . $r['location']);
 $r = $p->get('/portal');
-check('dashboard shows for the new user', $r['status'] === 200 && str_contains($r['body'], 'Free plan') && !str_contains($r['body'], 'Opt-out requests pending'));
+check('dashboard shows for the new user', $r['status'] === 200 && str_contains($r['body'], 'Free plan') && !str_contains($r['body'], 'opt-out requests pending'));
+echo "Portal product pages (free plan)\n";
+foreach (['/portal', '/portal/search', '/portal/new', '/portal/new/fl', '/portal/states', '/portal/account'] as $path) {
+    $r = $p->get($path);
+    check("portal $path renders AdminLTE", $r['status'] === 200 && str_contains($r['body'], 'main-sidebar') && $hasMeta($r['body']) && $hasHeader($r), (string) $r['status']);
+}
+$r = $p->get('/portal');
+check('dashboard shows newest filings and the state grid', str_contains($r['body'], 'Newest filings') && str_contains($r['body'], 'ei-state-tile'));
+$r = $p->get('/portal/search?q=7045435');
+check('filing number search finds Redline Creative LLC', str_contains($r['body'], 'Redline Creative LLC') && str_contains($r['body'], '1 company'));
+check('search result links to the portal company page', str_contains($r['body'], 'href="/portal/company/ny/redline-creative-llc-7045435"'));
+check('search shows 6,000 companies without filters', str_contains($p->get('/portal/search')['body'], '6,000 companies'));
+check('stopword-only and short queries do not error', $p->get('/portal/search?q=the')['status'] === 200 && $p->get('/portal/search?q=ab')['status'] === 200);
+check('bad date filters are ignored, not an error', $p->get('/portal/search?from=nope&to=2026-13-45')['status'] === 200);
+check('new filings by state renders', str_contains($p->get('/portal/new/fl')['body'], 'New Florida businesses'));
+check('/portal/new/florida redirects to /portal/new/fl (308)', ($r2 = $p->get('/portal/new/florida'))['status'] === 308 && str_ends_with((string) $r2['location'], '/portal/new/fl'), $r2['status'] . ' ' . $r2['location']);
+check('unknown state is 404', $p->get('/portal/new/zz')['status'] === 404);
+check('coverage table lists Wyoming', str_contains($p->get('/portal/states')['body'], 'Wyoming'));
+$r = $p->get('/portal/company/ny/redline-creative-llc-7045435');
+check('company page renders for a logged-in user', $r['status'] === 200 && str_contains($r['body'], 'Company details') && str_contains($r['body'], 'Statewide Filing Agents LLC'));
+$q = $pdo->prepare("SELECT p.name FROM people p JOIN entities e ON e.id = p.entity_id WHERE e.url_key = '7045435' AND p.role <> 'agent' ORDER BY p.id LIMIT 1");
+$q->execute();
+$officer = (string) $q->fetchColumn();
+check('free plan: officers are locked', $officer !== '' && !str_contains($r['body'], $officer) && str_contains($r['body'], 'Unlock with Pro'));
+$r = $p->get('/portal/company/new-york/old-name-7045435');
+check('old slug / full state name redirects (308)', $r['status'] === 308 && str_ends_with((string) $r['location'], '/portal/company/ny/redline-creative-llc-7045435'), $r['status'] . ' ' . $r['location']);
+check('unknown company is 404', $p->get('/portal/company/ny/nothing-0000000')['status'] === 404);
+$pdo->exec("UPDATE `user` SET plan = 'pro' WHERE email = 'user@example.com'");
+$r = $p->get('/portal/company/ny/redline-creative-llc-7045435');
+check('pro plan: officers and addresses are visible', str_contains($r['body'], $officer) && !str_contains($r['body'], 'Unlock with Pro'));
+$pdo->exec("UPDATE `user` SET plan = 'free' WHERE email = 'user@example.com'");
+
 $r = (new Http('http://127.0.0.1:18080'))->postForm('/portal/auth/register', ['RegisterForm' => ['name' => 'Dup', 'email' => 'USER@example.com', 'password' => 'password1', 'password_repeat' => 'password1']]);
 check('duplicate email (case-insensitive) is rejected', str_contains($r['body'], 'already exists'));
 $r = $p->postForm('/portal/account', ['AccountForm' => ['name' => 'Renamed', 'current_password' => 'bad', 'new_password' => 'newpassword1', 'new_password_repeat' => 'newpassword1']]);
@@ -212,14 +244,14 @@ run('php yii seed/admin admin@example.com Admin-pass-1', $env, $root);
 $a = new Http('http://127.0.0.1:18080');
 $a->postForm('/portal/auth/login', ['LoginForm' => ['email' => 'admin@example.com', 'password' => 'Admin-pass-1']]);
 $r = $a->get('/portal');
-check('admin dashboard shows admin counters', str_contains($r['body'], 'Opt-out requests pending') && (bool) preg_match('/\d+ on waitlist/', $r['body']));
+check('admin dashboard shows admin counters', str_contains($r['body'], 'opt-out requests pending') && str_contains($r['body'], 'new contact messages') && (bool) preg_match('/\d+ on waitlist/', $r['body']));
 
 proc_terminate($srv);
 
 echo "Coming-soon gate\n";
 $srv2 = startServer(18081, array_merge($env, ['SITE_MODE' => 'coming_soon']), $root);
 $g = new Http('http://127.0.0.1:18081');
-foreach (['/', '/search', '/company/ny/redline-creative-llc-7045435', '/pricing'] as $path) {
+foreach (['/', '/features', '/pricing', '/portal/auth/login'] as $path) {
     check("gate: $path shows the waitlist page", str_contains($g->get($path)['body'], 'Join waitlist'));
 }
 check('gate: coming-soon page is noindex', $hasMeta($g->get('/')['body']));

@@ -113,3 +113,8 @@ dl.facts dt { color: var(--ei-muted); font-weight: 500; }
 .prose { max-width: 760px; }
 
 .coming-soon { min-height: 100vh; display: grid; place-items: center; padding: 48px 20px; }
+
+/* landing page */
+.preview { box-shadow: 0 10px 30px rgba(0,0,0,.08); }
+.preview-row { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid var(--ei-line); font-size: 14px; }
+.step { width: 30px; height: 30px; border-radius: 50%; background: var(--ei-accent); color: var(--ei-accent-ink); display: grid; place-items: center; font-weight: 700; margin-bottom: 10px; }

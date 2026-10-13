@@ -1,15 +1,14 @@
 <?php
 
-namespace app\controllers;
+namespace app\modules\portal\controllers;
 
 use app\helpers\Fmt;
 use app\helpers\States;
 use app\services\EntityRepository;
 use Yii;
-use yii\web\Controller;
 use yii\web\NotFoundHttpException;
 
-class NewController extends Controller
+class NewController extends PortalController
 {
     public function actionIndex()
     {

@@ -19,13 +19,15 @@ $user = Yii::$app->user->identity;
 $route = Yii::$app->controller->route;
 $nav = [
     ['Dashboard', 'fa-tachometer-alt', ['/portal/default/index'], 'portal/default'],
+    ['Search companies', 'fa-search', ['/portal/search/index'], 'portal/search'],
+    ['New filings', 'fa-clock', ['/portal/new/index'], 'portal/new'],
+    ['Coverage by state', 'fa-map', ['/portal/states/index'], 'portal/states'],
     ['Account', 'fa-user-cog', ['/portal/account/index'], 'portal/account'],
 ];
 $site = [
-    ['Search companies', 'fa-search', ['/search/index']],
-    ['New filings', 'fa-clock', ['/new/index']],
-    ['Coverage by state', 'fa-map', ['/states/index']],
     ['Pricing & plans', 'fa-tags', ['/pricing/index']],
+    ['Help & contact', 'fa-life-ring', ['/site/contact']],
+    ['FAQ', 'fa-question-circle', ['/site/faq']],
 ];
 ?>
 <?php $this->beginPage() ?>
@@ -41,7 +43,7 @@ $site = [
     <nav class="main-header navbar navbar-expand navbar-white navbar-light">
         <ul class="navbar-nav">
             <li class="nav-item"><a class="nav-link" data-widget="pushmenu" href="#" role="button" aria-label="Toggle menu"><i class="fas fa-bars"></i></a></li>
-            <li class="nav-item d-none d-sm-inline-block"><a href="<?= Url::to(['/site/index']) ?>" class="nav-link">← Public site</a></li>
+            <li class="nav-item d-none d-sm-inline-block"><a href="<?= Url::to(['/site/index']) ?>" class="nav-link">Website</a></li>
         </ul>
         <ul class="navbar-nav ml-auto">
             <li class="nav-item d-none d-sm-block"><span class="nav-link text-muted"><?= Html::encode($user->name ?: $user->email) ?></span></li>
@@ -67,7 +69,7 @@ $site = [
                     <?php foreach ($nav as [$label, $icon, $url, $prefix]): ?>
                         <li class="nav-item"><a href="<?= Url::to($url) ?>" class="nav-link<?= str_starts_with($route, $prefix) ? ' active' : '' ?>"><i class="nav-icon fas <?= $icon ?>"></i><p><?= $label ?></p></a></li>
                     <?php endforeach ?>
-                    <li class="nav-header">PUBLIC DATA</li>
+                    <li class="nav-header">HELP</li>
                     <?php foreach ($site as [$label, $icon, $url]): ?>
                         <li class="nav-item"><a href="<?= Url::to($url) ?>" class="nav-link"><i class="nav-icon fas <?= $icon ?>"></i><p><?= $label ?></p></a></li>
                     <?php endforeach ?>
@@ -78,7 +80,7 @@ $site = [
 
     <div class="content-wrapper">
         <section class="content-header">
-            <div class="container-fluid"><h1><?= Html::encode($this->title) ?></h1></div>
+            <div class="container-fluid"><h1 class="h3"><?= Html::encode($this->title) ?></h1></div>
         </section>
         <section class="content">
             <div class="container-fluid">

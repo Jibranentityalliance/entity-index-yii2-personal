@@ -1,11 +1,10 @@
 <?php
 
-namespace app\controllers;
+namespace app\modules\portal\controllers;
 
 use app\services\EntityRepository;
-use yii\web\Controller;
 
-class StatesController extends Controller
+class StatesController extends PortalController
 {
     public function actionIndex()
     {

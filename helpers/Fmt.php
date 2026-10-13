@@ -72,12 +72,12 @@ class Fmt
 
     public static function entityUrl(array $e, bool $absolute = false): string
     {
-        return Url::to(['/company/view', 'state' => strtolower($e['state']), 'slug' => $e['slug'] . '-' . $e['url_key']], $absolute);
+        return Url::to(['/portal/company/view', 'state' => strtolower($e['state']), 'slug' => $e['slug'] . '-' . $e['url_key']], $absolute);
     }
 
     public static function stateUrl(string $code): string
     {
-        return Url::to(['/new/state', 'state' => strtolower($code)]);
+        return Url::to(['/portal/new/state', 'state' => strtolower($code)]);
     }
 
     /** Absolute URL on the configured canonical host (not the request host). */
@@ -91,6 +91,14 @@ class Fmt
         $s = strtolower($status);
         $cls = $s === 'active' ? 'ok' : (str_contains($s, 'dissolv') || str_contains($s, 'revok') ? 'bad' : 'warn');
         return '<span class="badge-pill-ei ' . $cls . '"><span class="dot"></span>' . Html::encode($status) . '</span>';
+    }
+
+    /** AdminLTE / Bootstrap 4 badge for a record status. */
+    public static function statusBadgeBs4(string $status): string
+    {
+        $s = strtolower($status);
+        $cls = $s === 'active' ? 'success' : (str_contains($s, 'dissolv') || str_contains($s, 'revok') ? 'danger' : 'warning');
+        return '<span class="badge badge-' . $cls . '">' . Html::encode($status) . '</span>';
     }
 
     /** "123 Main St, Suite 4, Miami, FL 33101" -> "Miami, FL" (street is a Pro field). */

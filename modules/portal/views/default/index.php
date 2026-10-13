@@ -3,63 +3,78 @@
 /** @var yii\web\View $this */
 /** @var app\models\User $user */
 /** @var string|null $latestDay */
-/** @var int $latestCount */
+/** @var array|null $latest */
+/** @var array $stats */
 /** @var int $total */
+/** @var int $week */
 /** @var array|null $adminStats */
 
 use app\helpers\Fmt;
+use app\helpers\States;
 use yii\helpers\Html;
 use yii\helpers\Url;
 
 $this->title = 'Dashboard';
+$latestCount = $latest['total'] ?? 0;
 ?>
 <div class="row">
     <div class="col-sm-6 col-lg-3">
         <div class="small-box bg-info"><div class="inner"><h3><?= Fmt::num($latestCount) ?></h3><p>New filings<?= $latestDay ? ' · ' . Fmt::date($latestDay) : '' ?></p></div><div class="icon"><i class="fas fa-building"></i></div>
-            <a href="<?= Url::to(['/new/index']) ?>" class="small-box-footer">Browse new filings <i class="fas fa-arrow-circle-right"></i></a></div>
+            <a href="<?= Url::to(['/portal/new/index']) ?>" class="small-box-footer">Browse new filings <i class="fas fa-arrow-circle-right"></i></a></div>
     </div>
     <div class="col-sm-6 col-lg-3">
-        <div class="small-box bg-success"><div class="inner"><h3><?= Fmt::num($total) ?></h3><p>Companies indexed</p></div><div class="icon"><i class="fas fa-database"></i></div>
-            <a href="<?= Url::to(['/search/index']) ?>" class="small-box-footer">Search all <i class="fas fa-arrow-circle-right"></i></a></div>
+        <div class="small-box bg-success"><div class="inner"><h3><?= Fmt::num($week) ?></h3><p>Filings, last 7 days</p></div><div class="icon"><i class="fas fa-calendar-week"></i></div>
+            <a href="<?= Url::to(['/portal/states/index']) ?>" class="small-box-footer">Coverage by state <i class="fas fa-arrow-circle-right"></i></a></div>
     </div>
     <div class="col-sm-6 col-lg-3">
-        <div class="small-box bg-warning"><div class="inner"><h3><?= Html::encode(ucfirst($user->plan)) ?></h3><p>Your plan</p></div><div class="icon"><i class="fas fa-tag"></i></div>
+        <div class="small-box bg-warning"><div class="inner"><h3><?= Fmt::num($total) ?></h3><p>Companies indexed</p></div><div class="icon"><i class="fas fa-database"></i></div>
+            <a href="<?= Url::to(['/portal/search/index']) ?>" class="small-box-footer">Search all <i class="fas fa-arrow-circle-right"></i></a></div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="small-box bg-secondary"><div class="inner"><h3><?= Html::encode(ucfirst($user->plan)) ?></h3><p>Your plan<?= $user->isAdmin() ? ' · admin' : '' ?></p></div><div class="icon"><i class="fas fa-tag"></i></div>
             <a href="<?= Url::to(['/pricing/index']) ?>" class="small-box-footer">See plans <i class="fas fa-arrow-circle-right"></i></a></div>
     </div>
-    <?php if ($adminStats): ?>
-        <div class="col-sm-6 col-lg-3">
-            <div class="small-box bg-danger"><div class="inner"><h3><?= Fmt::num($adminStats['optOutPending']) ?></h3><p>Opt-out requests pending · <?= Fmt::num($adminStats['waitlist']) ?> on waitlist</p></div><div class="icon"><i class="fas fa-user-shield"></i></div>
-                <span class="small-box-footer">Admin</span></div>
-        </div>
-    <?php endif ?>
 </div>
 
-<div class="row">
-    <div class="col-lg-7">
-        <div class="card">
-            <div class="card-header"><h3 class="card-title">Welcome<?= $user->name ? ', ' . Html::encode($user->name) : '' ?></h3></div>
-            <div class="card-body">
-                <p>Your free account is active. Paid features are opening soon; join the waitlist from the <a href="<?= Url::to(['/pricing/index', '#' => 'waitlist']) ?>">pricing page</a> and we’ll email you first.</p>
-                <ul class="mb-0">
-                    <li>Full company records with officers and addresses (Pro)</li>
-                    <li>Saved-search alerts delivered every morning (Pro)</li>
-                    <li>CSV export and API access (Pro / Business)</li>
-                </ul>
-            </div>
-        </div>
+<?php if ($adminStats): ?>
+    <div class="alert alert-light border">
+        <strong>Admin:</strong>
+        <?= Fmt::num($adminStats['optOutPending']) ?> opt-out requests pending ·
+        <?= Fmt::num($adminStats['contactNew']) ?> new contact messages ·
+        <?= Fmt::num($adminStats['waitlist']) ?> on waitlist
     </div>
-    <div class="col-lg-5">
-        <div class="card">
-            <div class="card-header"><h3 class="card-title">Account</h3></div>
-            <div class="card-body">
-                <dl class="row mb-0">
-                    <dt class="col-sm-4">Email</dt><dd class="col-sm-8"><?= Html::encode($user->email) ?></dd>
-                    <dt class="col-sm-4">Plan</dt><dd class="col-sm-8"><?= Html::encode(ucfirst($user->plan)) ?></dd>
-                    <dt class="col-sm-4">Member since</dt><dd class="col-sm-8"><?= Fmt::date(substr($user->created_at, 0, 10)) ?></dd>
-                    <dt class="col-sm-4">Last sign-in</dt><dd class="col-sm-8"><?= Fmt::dateTime($user->last_login_at) ?></dd>
-                </dl>
+<?php endif ?>
+
+<div class="card card-primary card-outline">
+    <div class="card-body">
+        <form action="<?= Url::to(['/portal/search/index']) ?>" role="search">
+            <div class="form-row">
+                <div class="col-md-6 mb-2"><label for="dq" class="sr-only">Search</label><input id="dq" class="form-control form-control-lg" name="q" type="search" placeholder="Company name, officer or agent name, or filing number" autofocus></div>
+                <div class="col-md-3 mb-2"><label for="dstate" class="sr-only">State</label>
+                    <select id="dstate" class="form-control form-control-lg" name="state"><option value="">All states</option>
+                        <?php foreach (States::all() as $s): ?><option value="<?= $s['code'] ?>"><?= Html::encode($s['name']) ?></option><?php endforeach ?>
+                    </select></div>
+                <div class="col-md-3 mb-2"><button class="btn btn-primary btn-lg btn-block" type="submit"><i class="fas fa-search"></i> Search</button></div>
             </div>
-            <div class="card-footer"><a href="<?= Url::to(['/portal/account/index']) ?>" class="btn btn-sm btn-primary">Edit account</a></div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Newest filings<?= $latestDay ? ' · ' . Fmt::dayLong($latestDay) : '' ?></h3>
+        <div class="card-tools"><a href="<?= Url::to(['/portal/new/index']) ?>">See all <?= Fmt::num($latestCount) ?> →</a></div>
+    </div>
+    <div class="card-body p-0"><?= $this->render('/_partials/entity-table', ['items' => $latest['items'] ?? [], 'empty' => 'No filings indexed yet.']) ?></div>
+</div>
+
+<div class="card">
+    <div class="card-header"><h3 class="card-title">New businesses by state (latest filing day)</h3><div class="card-tools"><a href="<?= Url::to(['/portal/states/index']) ?>">Coverage &amp; freshness →</a></div></div>
+    <div class="card-body">
+        <div class="ei-state-grid">
+            <?php foreach (States::all() as $s): $n = $stats[$s['code']]['latestDayCount'] ?? 0; ?>
+                <a href="<?= Fmt::stateUrl($s['code']) ?>" class="ei-state-tile"><span><?= Html::encode($s['name']) ?></span><span class="n<?= $n ? '' : ' zero' ?>"><?= $n ? Fmt::num($n) : '–' ?></span></a>
+            <?php endforeach ?>
         </div>
     </div>
 </div>

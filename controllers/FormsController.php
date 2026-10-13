@@ -2,6 +2,7 @@
 
 namespace app\controllers;
 
+use app\models\ContactMessage;
 use app\models\OptOutRequest;
 use app\models\Waitlist;
 use Yii;
@@ -15,7 +16,7 @@ class FormsController extends Controller
     public function behaviors()
     {
         return [
-            'verbs' => ['class' => VerbFilter::class, 'actions' => ['waitlist' => ['post'], 'opt-out' => ['post']]],
+            'verbs' => ['class' => VerbFilter::class, 'actions' => ['waitlist' => ['post'], 'opt-out' => ['post'], 'contact' => ['post']]],
         ];
     }
 
@@ -35,6 +36,21 @@ class FormsController extends Controller
         if (!$m->subscribe()) {
             Yii::$app->response->statusCode = 400;
             return ['ok' => false, 'error' => $m->getFirstError('email') ?: 'Something went wrong.'];
+        }
+        return ['ok' => true];
+    }
+
+    public function actionContact()
+    {
+        $m = new ContactMessage();
+        $m->load(Yii::$app->request->post(), '');
+        if ($m->website !== null && $m->website !== '') {
+            return ['ok' => true]; // honeypot
+        }
+        if (!$m->save()) {
+            Yii::$app->response->statusCode = 400;
+            $errors = $m->getFirstErrors();
+            return ['ok' => false, 'error' => reset($errors) ?: 'Please check the form.'];
         }
         return ['ok' => true];
     }

@@ -8,14 +8,13 @@ return [
     'siteMode' => env('SITE_MODE', 'live'), // live | coming_soon
     // Tell search engines not to index anything (meta tag + X-Robots-Tag header). Set SITE_NOINDEX=false at launch.
     'noindex' => filter_var(env('SITE_NOINDEX', true), FILTER_VALIDATE_BOOLEAN),
-    'sitemapPageSize' => 50000,
 
     // Proposed prices — change here; the pricing page and home page read from this list.
     'tiers' => [
         [
             'id' => 'free', 'name' => 'Free', 'price' => '$0', 'per' => '', 'for' => 'Anyone looking up a company',
             'features' => ['Company pages: name, state, type, filing date, status, registered agent', 'Basic search', 'Last 7 days of new filings', '10 full lookups per day'],
-            'cta' => 'Start searching', 'url' => ['/search/index'],
+            'cta' => 'Create free account', 'url' => ['/portal/auth/register'],
         ],
         [
             'id' => 'pro', 'name' => 'Pro', 'price' => '$49', 'per' => '/mo', 'for' => 'Agents, accountants, small sales teams', 'featured' => true,

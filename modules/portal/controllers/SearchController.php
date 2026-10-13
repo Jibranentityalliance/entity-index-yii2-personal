@@ -1,12 +1,11 @@
 <?php
 
-namespace app\controllers;
+namespace app\modules\portal\controllers;
 
 use app\services\EntityRepository;
 use Yii;
-use yii\web\Controller;
 
-class SearchController extends Controller
+class SearchController extends PortalController
 {
     public function actionIndex()
     {
