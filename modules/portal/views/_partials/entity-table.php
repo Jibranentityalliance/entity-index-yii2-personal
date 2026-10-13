@@ -16,7 +16,7 @@ $empty = $empty ?? 'No companies match.';
     <div class="p-4 text-center text-muted"><?= Html::encode($empty) ?></div>
 <?php else: ?>
     <div class="table-responsive">
-        <table class="table table-hover ei-data mb-0">
+        <table class="table table-hover mb-0">
             <thead>
             <tr>
                 <th>Company</th>

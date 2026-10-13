@@ -17,7 +17,7 @@ $within24 = count(array_filter($stats, fn($s) => ($s['medianLagHours'] ?? 99) <=
 <div class="card">
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover ei-data mb-0">
+            <table class="table table-hover mb-0">
                 <thead><tr>
                     <th>Jurisdiction</th><th class="d-none d-md-table-cell">Source</th><th class="text-right">Latest day</th><th class="text-right">Last 7 days</th>
                     <th class="text-right">Median lag</th><th class="d-none d-md-table-cell">Last update</th><th>Status</th>

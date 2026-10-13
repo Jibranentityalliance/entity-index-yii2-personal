@@ -42,6 +42,8 @@ Forms (AJAX, CSRF-protected, honeypot): `POST /api/waitlist`, `POST /api/opt-out
 | `/portal/account` | profile and password |
 | `/portal/auth/login`, `/portal/auth/register`, `/portal/auth/logout` (POST) | authentication |
 
+The portal UI uses stock AdminLTE 3 / Bootstrap 4 components (info-box, card, callout, btn, table, progress…) with no custom portal stylesheet; keep it that way and reach for a stock component before writing CSS.
+
 `php yii seed/admin you@example.com 'password'` creates an admin. Paid plans are set on the `user.plan` column (`free|pro|business|bulk`) until billing exists.
 Not built yet: saved searches, CSV export, API keys / API v1, billing (Stripe is a placeholder), usage limits, admin queues for contact / opt-out / waitlist.
 

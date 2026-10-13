@@ -31,22 +31,22 @@ $this->title = $e->name;
         <div class="card">
             <div class="card-header"><h3 class="card-title">Company details</h3></div>
             <div class="card-body p-0">
-                <dl class="ei-facts">
-                    <dt>Legal name</dt><dd><?= Html::encode($e->name) ?></dd>
-                    <dt>State</dt><dd><a href="<?= Fmt::stateUrl($st['code']) ?>"><?= Html::encode($st['name']) ?></a></dd>
-                    <dt>Entity type</dt><dd><?= Html::encode($e->entity_type) ?></dd>
-                    <dt>Status</dt><dd><?= Html::encode($e->status) ?></dd>
-                    <dt>Filing number</dt><dd class="text-monospace"><?= Html::encode($e->state_filing_number) ?></dd>
-                    <dt>Formation date</dt><dd><?= Fmt::date($e->formation_date) ?></dd>
-                    <dt>Location</dt><dd><?= Html::encode($where ?? '—') ?><?= $e->county ? ' (' . Html::encode($e->county) . ' County)' : '' ?></dd>
-                    <?php if ($e->naics_label): ?><dt>Likely industry</dt><dd><?= Html::encode($e->naics_label) ?> <span class="text-muted small">· NAICS <?= Html::encode($e->naics_guess) ?> (estimated)</span></dd><?php endif ?>
-                </dl>
-                <div class="ei-timeline" aria-label="Filing freshness">
-                    <div><div class="k">Filed with state</div><div class="t"><?= Fmt::dateTime($e->filed_at) ?></div></div>
-                    <div class="bar"><span><?= Fmt::lag($lag) ?></span></div>
-                    <div class="text-right"><div class="k">Searchable on EntityIndex</div><div class="t"><?= Fmt::dateTime($e->indexed_at) ?></div></div>
+                <dl class="row mb-0 px-3 pt-3">
+                        <dt class="col-sm-3 text-muted font-weight-normal">Legal name</dt><dd class="col-sm-9"><?= Html::encode($e->name) ?></dd>
+                        <dt class="col-sm-3 text-muted font-weight-normal">State</dt><dd class="col-sm-9"><a href="<?= Fmt::stateUrl($st['code']) ?>"><?= Html::encode($st['name']) ?></a></dd>
+                        <dt class="col-sm-3 text-muted font-weight-normal">Entity type</dt><dd class="col-sm-9"><?= Html::encode($e->entity_type) ?></dd>
+                        <dt class="col-sm-3 text-muted font-weight-normal">Status</dt><dd class="col-sm-9"><?= Html::encode($e->status) ?></dd>
+                        <dt class="col-sm-3 text-muted font-weight-normal">Filing number</dt><dd class="col-sm-9 text-monospace"><?= Html::encode($e->state_filing_number) ?></dd>
+                        <dt class="col-sm-3 text-muted font-weight-normal">Formation date</dt><dd class="col-sm-9"><?= Fmt::date($e->formation_date) ?></dd>
+                        <dt class="col-sm-3 text-muted font-weight-normal">Location</dt><dd class="col-sm-9"><?= Html::encode($where ?? '—') ?><?= $e->county ? ' (' . Html::encode($e->county) . ' County)' : '' ?></dd>
+                        <dt class="col-sm-3 text-muted font-weight-normal">Likely industry</dt><dd class="col-sm-9"><?= Html::encode($e->naics_label) ?> <span class="text-muted small">· NAICS <?= Html::encode($e->naics_guess) ?> (estimated)</span></dd>
+                    </dl>
+                <div class="d-flex align-items-center px-3 pb-3" aria-label="Filing freshness">
+                    <div><div class="text-muted text-uppercase small">Filed with state</div><strong><?= Fmt::dateTime($e->filed_at) ?></strong></div>
+                    <div class="flex-grow-1 mx-3 text-center"><span class="badge badge-success mb-1"><?= Fmt::lag($lag) ?></span><div class="progress" style="height:4px"><div class="progress-bar bg-success" style="width:100%"></div></div></div>
+                    <div class="text-right"><div class="text-muted text-uppercase small">Searchable on EntityIndex</div><strong><?= Fmt::dateTime($e->indexed_at) ?></strong></div>
                 </div>
-                <div class="ei-source">
+                <div class="card-footer text-muted small">
                     Source: <?= Html::encode($sourceName) ?>, filing #<?= Html::encode($e->state_filing_number) ?>, pulled <?= Fmt::dateTime($e->indexed_at) ?>.
                     <?php if ($e->source_url): ?><a href="<?= Html::encode($e->source_url) ?>" rel="nofollow noopener" target="_blank">View official record ↗</a>
                     <?php else: ?><span class="text-muted">(Official record link appears here for live data.)</span><?php endif ?>
@@ -58,9 +58,9 @@ $this->title = $e->name;
             <div class="card-header"><h3 class="card-title">Registered agent</h3></div>
             <?php if ($agent): ?>
                 <div class="card-body p-0">
-                    <dl class="ei-facts">
-                        <dt>Name</dt><dd><?= Html::encode($agent->name) ?> <?php if ($agent->is_commercial_agent): ?><span class="badge badge-secondary">Commercial agent</span><?php endif ?></dd>
-                        <dt>Address</dt><dd><?= Html::encode($agent->is_commercial_agent || $full ? $agent->address : (Fmt::cityState($agent->address) ?? '—')) ?></dd>
+                    <dl class="row mb-0 px-3 pt-3">
+                        <dt class="col-sm-3 text-muted font-weight-normal">Name</dt><dd class="col-sm-9"><?= Html::encode($agent->name) ?> <?php if ($agent->is_commercial_agent): ?><span class="badge badge-secondary">Commercial agent</span><?php endif ?></dd>
+                        <dt class="col-sm-3 text-muted font-weight-normal">Address</dt><dd class="col-sm-9"><?= Html::encode($agent->is_commercial_agent || $full ? $agent->address : (Fmt::cityState($agent->address) ?? '—')) ?></dd>
                     </dl>
                 </div>
             <?php else: ?><div class="card-body text-muted">No registered agent on file.</div><?php endif ?>
@@ -74,7 +74,7 @@ $this->title = $e->name;
             <div class="card-body p-0">
                 <?php if ($full): ?>
                     <div class="table-responsive">
-                        <table class="table ei-data mb-0">
+                        <table class="table mb-0">
                             <thead><tr><th>Name</th><th>Role</th><th>Address</th></tr></thead>
                             <tbody>
                             <?php foreach ($people as $p): ?>
@@ -84,24 +84,26 @@ $this->title = $e->name;
                             </tbody>
                         </table>
                     </div>
-                    <div class="ei-source" style="border-top:0">
+                    <div class="card-footer text-muted small">
                         <span class="text-muted">Mailing address: </span><?= Html::encode($e->mailing_address ?? '—') ?><br>
                         <span class="text-muted">Principal address: </span><?= Html::encode($e->principal_address ?? '—') ?>
                     </div>
                 <?php else: ?>
-                    <?php foreach ($people as $p): ?>
-                        <div class="ei-locked-row" aria-hidden="true">
-                            <span class="blk" style="width:140px"></span>
-                            <span class="text-muted small mr-3" style="width:120px"><?= Html::encode(Fmt::titleCase($p->title ?: $p->role)) ?></span>
-                            <span class="blk" style="width:220px"></span>
-                        </div>
-                    <?php endforeach ?>
-                    <div class="ei-locked-cta">
-                        <span><i class="fas fa-lock text-muted"></i> <strong>Full record with Pro:</strong> officer names, mailing and principal addresses, CSV export and daily alerts for new companies like this one.</span>
-                        <a href="<?= Url::to(['/pricing/index', 'plan' => 'pro']) ?>" class="btn btn-primary btn-sm">Unlock with Pro</a>
+                    <table class="table mb-0">
+                        <thead><tr><th>Name</th><th>Role</th><th>Address</th></tr></thead>
+                        <tbody>
+                        <?php foreach ($people as $p): ?>
+                            <tr aria-hidden="true"><td class="text-muted">••••••••••</td><td><?= Html::encode(Fmt::titleCase($p->title ?: $p->role)) ?></td><td class="text-muted">•••••••••••••••••••</td></tr>
+                        <?php endforeach ?>
+                        </tbody>
+                    </table>
+                    <div class="callout callout-warning m-3">
+                        <h5><i class="fas fa-lock"></i> Full record with Pro</h5>
+                        <p>Officer names, mailing and principal addresses, CSV export and daily alerts for new companies like this one.</p>
+                        <a href="<?= Url::to(['/pricing/index', 'plan' => 'pro']) ?>" class="btn btn-primary btn-sm text-white text-decoration-none">Unlock with Pro</a>
                     </div>
                 <?php endif ?>
-                <div class="ei-source">
+                <div class="card-footer text-muted small">
                     <span class="text-muted">Filing history: </span>
                     <?php foreach ($e->filings as $i => $f): ?><?= $i ? ' · ' : '' ?><?= Html::encode(Fmt::titleCase($f->filing_type)) ?> (<?= Fmt::date($f->filing_date) ?>)<?php endforeach ?>
                 </div>

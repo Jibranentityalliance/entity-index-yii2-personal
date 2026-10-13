@@ -18,22 +18,22 @@ $this->title = 'Dashboard';
 $latestCount = $latest['total'] ?? 0;
 ?>
 <div class="row">
-    <div class="col-sm-6 col-lg-3">
-        <div class="small-box bg-info"><div class="inner"><h3><?= Fmt::num($latestCount) ?></h3><p>New filings<?= $latestDay ? ' · ' . Fmt::date($latestDay) : '' ?></p></div><div class="icon"><i class="fas fa-building"></i></div>
-            <a href="<?= Url::to(['/portal/new/index']) ?>" class="small-box-footer">Browse new filings <i class="fas fa-arrow-circle-right"></i></a></div>
-    </div>
-    <div class="col-sm-6 col-lg-3">
-        <div class="small-box bg-success"><div class="inner"><h3><?= Fmt::num($week) ?></h3><p>Filings, last 7 days</p></div><div class="icon"><i class="fas fa-calendar-week"></i></div>
-            <a href="<?= Url::to(['/portal/states/index']) ?>" class="small-box-footer">Coverage by state <i class="fas fa-arrow-circle-right"></i></a></div>
-    </div>
-    <div class="col-sm-6 col-lg-3">
-        <div class="small-box bg-warning"><div class="inner"><h3><?= Fmt::num($total) ?></h3><p>Companies indexed</p></div><div class="icon"><i class="fas fa-database"></i></div>
-            <a href="<?= Url::to(['/portal/search/index']) ?>" class="small-box-footer">Search all <i class="fas fa-arrow-circle-right"></i></a></div>
-    </div>
-    <div class="col-sm-6 col-lg-3">
-        <div class="small-box bg-secondary"><div class="inner"><h3><?= Html::encode(ucfirst($user->plan)) ?></h3><p>Your plan<?= $user->isAdmin() ? ' · admin' : '' ?></p></div><div class="icon"><i class="fas fa-tag"></i></div>
-            <a href="<?= Url::to(['/pricing/index']) ?>" class="small-box-footer">See plans <i class="fas fa-arrow-circle-right"></i></a></div>
-    </div>
+    <?php foreach ([
+        ['info', 'fa-building', 'Latest day', Fmt::num($latestCount), ['/portal/new/index']],
+        ['success', 'fa-calendar-week', 'Last 7 days', Fmt::num($week), ['/portal/states/index']],
+        ['warning', 'fa-database', 'Indexed', Fmt::num($total), ['/portal/search/index']],
+        ['secondary', 'fa-tag', 'Your plan', ucfirst($user->plan), ['/pricing/index']],
+    ] as [$color, $icon, $label, $value, $route]): ?>
+        <div class="col-sm-6 col-lg-3">
+            <div class="info-box">
+                <span class="info-box-icon bg-<?= $color ?>"><i class="fas <?= $icon ?>"></i></span>
+                <div class="info-box-content">
+                    <span class="info-box-text"><a href="<?= Url::to($route) ?>" class="text-reset stretched-link"><?= Html::encode($label) ?></a></span>
+                    <span class="info-box-number"><?= Html::encode($value) ?></span>
+                </div>
+            </div>
+        </div>
+    <?php endforeach ?>
 </div>
 
 <?php if ($adminStats): ?>
@@ -71,9 +71,11 @@ $latestCount = $latest['total'] ?? 0;
 <div class="card">
     <div class="card-header"><h3 class="card-title">New businesses by state (latest filing day)</h3><div class="card-tools"><a href="<?= Url::to(['/portal/states/index']) ?>">Coverage &amp; freshness →</a></div></div>
     <div class="card-body">
-        <div class="ei-state-grid">
+        <div class="row">
             <?php foreach (States::all() as $s): $n = $stats[$s['code']]['latestDayCount'] ?? 0; ?>
-                <a href="<?= Fmt::stateUrl($s['code']) ?>" class="ei-state-tile"><span><?= Html::encode($s['name']) ?></span><span class="n<?= $n ? '' : ' zero' ?>"><?= $n ? Fmt::num($n) : '–' ?></span></a>
+                <div class="col-6 col-md-4 col-lg-3 mb-2">
+                    <a href="<?= Fmt::stateUrl($s['code']) ?>" class="btn btn-default btn-block d-flex justify-content-between"><span><?= Html::encode($s['name']) ?></span><span class="<?= $n ? 'font-weight-bold' : 'text-muted' ?>"><?= $n ? Fmt::num($n) : '–' ?></span></a>
+                </div>
             <?php endforeach ?>
         </div>
     </div>

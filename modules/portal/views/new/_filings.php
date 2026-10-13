@@ -28,7 +28,7 @@ $href = function (string $d, int $p = 1) use ($basePath, $routeParams, $days): s
 <div class="mb-3">
     <span class="text-muted small mr-2">Filing day:</span>
     <?php foreach ($days as $d): ?>
-        <a href="<?= $href($d) ?>" class="ei-chip<?= $d === $day ? ' on' : '' ?>"><?= Fmt::dayShort($d) ?></a>
+        <a href="<?= $href($d) ?>" class="btn btn-sm mr-1 mb-1 <?= $d === $day ? 'btn-primary' : 'btn-outline-secondary' ?>"><?= Fmt::dayShort($d) ?></a>
     <?php endforeach ?>
 </div>
 <div class="card">
@@ -45,7 +45,7 @@ $href = function (string $d, int $p = 1) use ($basePath, $routeParams, $days): s
     <div class="card">
         <div class="card-header"><h3 class="card-title">Browse by state</h3></div>
         <div class="card-body">
-            <?php foreach (States::all() as $s): ?><a class="ei-chip" href="<?= Fmt::stateUrl($s['code']) ?>"><?= Html::encode($s['name']) ?></a><?php endforeach ?>
+            <?php foreach (States::all() as $s): ?><a class="btn btn-sm btn-outline-secondary mr-1 mb-1" href="<?= Fmt::stateUrl($s['code']) ?>"><?= Html::encode($s['name']) ?></a><?php endforeach ?>
         </div>
     </div>
 <?php endif ?>
