@@ -108,6 +108,32 @@ HTTPS: `sudo /opt/bitnami/bncert-tool` (Let's Encrypt, sets up the redirect) or 
 - Attach a static IP, point the domain's `A` record (and `www`) at it.
 - Turn on automatic snapshots (Lightsail) and/or schedule `mysqldump entityindex | gzip > backup.sql.gz` via cron.
 
+## 7a. EIN skip-tracing sync (cron)
+
+`php yii ein-sync/companies` copies new rows of `manual_companies` from the EIN skip-tracing database into `ein_companies` and
+`ein_company_people` (the `data` JSON is split into columns). Set `DB_DSN_EIN_SKIP_TRACING`, `DB_USER_EIN_SKIP_TRACING` and
+`DB_PASS_EIN_SKIP_TRACING` in `.env` (ideally a DB user with SELECT only), run `php yii migrate`, then:
+
+```bash
+sudo -u daemon php yii ein-sync/companies           # first run: records the newest source id as the starting point, copies nothing
+sudo -u daemon php yii ein-sync/companies --limit=1 # copies one new row; check ein_companies
+```
+
+Then add it to the web user's crontab (`sudo crontab -u daemon -e`; `www-data` on Debian), every minute:
+
+```cron
+* * * * * cd /opt/bitnami/entityindex && php yii ein-sync/companies >> runtime/logs/ein-sync.log 2>&1
+```
+
+- It copies at most 10 rows per run, moving forward by `id`. Older rows are never backfilled.
+- That source is production: the job only runs `SELECT MAX(id)` and a primary-key range read with `LIMIT`, on a session
+  forced read-only with a 5-second statement limit (`config/db_ein_skip_tracing.php`).
+- A run that starts while the previous one is still going exits immediately.
+- Each run logs one line. "newest source id is N ahead" growing over time means rows arrive faster than 10 per minute.
+- Rows whose `data` cannot be read are skipped and logged (exit code 65). The last such error is kept in
+  `ein_sync_state.last_error`. Unknown JSON keys are logged as warnings, so the schema can be extended.
+- To re-copy rows, lower `ein_sync_state.last_source_id`. Rows already copied are only rewritten if they changed.
+
 ## 8. Launch checklist
 
 1. `SITE_MODE=coming_soon` until the real data pipeline is loading; check `/coming-soon`, `/opt-out`, `/legal/terms`.

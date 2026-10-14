@@ -2,6 +2,7 @@
 
 $params = require __DIR__ . '/params.php';
 $db = require __DIR__ . '/db.php';
+$dbEinSkipTracing = require __DIR__ . '/db_ein_skip_tracing.php';
 
 return [
     'id' => 'entityindex-console',
@@ -22,6 +23,8 @@ return [
             ],
         ],
         'db' => $db,
+        'dbEinSkipTracing' => $dbEinSkipTracing,
+        'mutex' => \yii\mutex\FileMutex::class,
     ],
     'params' => $params,
     'controllerMap' => [

@@ -1,7 +1,8 @@
 <?php
 /**
  * Smoke/integration tests: boots the app on PHP's built-in server against a THROWAWAY database
- * (migrate/fresh + seed/all), then exercises the public pages, forms, sitemaps, portal login and the coming-soon gate.
+ * (migrate/fresh + seed/all), then exercises the public pages, forms, sitemaps, portal login, the coming-soon gate and the
+ * EIN skip-tracing sync (its source table `manual_companies` is faked inside the same test database).
  *
  *   TEST_DB_DSN="mysql:host=127.0.0.1;dbname=entityindex_test" TEST_DB_USER=root TEST_DB_PASS= php tests/run.php
  *
@@ -18,6 +19,8 @@ $env = array_merge(getenv(), [
     'YII_ENV' => 'test', 'YII_DEBUG' => 'false',
     'DB_DSN' => $dsn, 'DB_USER' => getenv('TEST_DB_USER') ?: 'root', 'DB_PASS' => getenv('TEST_DB_PASS') ?: '',
     'COOKIE_VALIDATION_KEY' => 'test-key-0123456789abcdef0123456789', 'SITE_URL' => 'http://localhost:18080', 'SITE_MODE' => 'live',
+    // The skip-tracing "production" source is a fake manual_companies table in the test database; never the real one.
+    'DB_DSN_EIN_SKIP_TRACING' => $dsn, 'DB_USER_EIN_SKIP_TRACING' => getenv('TEST_DB_USER') ?: 'root', 'DB_PASS_EIN_SKIP_TRACING' => getenv('TEST_DB_PASS') ?: '',
 ]);
 
 $failures = 0;
@@ -311,6 +314,97 @@ check('gate: legal pages stay reachable', str_contains($g->get('/legal/terms')['
 $r = $g->ajax('/api/waitlist', ['email' => 'gate@example.com'], '/coming-soon');
 check('gate: waitlist API stays reachable', $r['status'] === 200);
 proc_terminate($srv2);
+
+echo "EIN skip-tracing sync\n";
+require_once "$root/services/EinSkipTracing/InvalidSourceRowException.php";
+require_once "$root/services/EinSkipTracing/ManualCompanyMapper.php";
+$fixture = array_column(json_decode(file_get_contents("$root/tests/fixtures/ein_manual_companies.json"), true), null, 'id');
+$srcRow = fn(int $id) => ['data' => json_encode($fixture[$id]['data'])] + $fixture[$id];
+$mapper = new app\services\EinSkipTracing\ManualCompanyMapper();
+
+$m = $mapper->map($srcRow(101));
+check('mapper: 2024 format, m/d/y date', $m['company']['date_filed'] === '2024-08-27' && $m['company']['is_active'] === true && count($m['people']) === 1);
+check('mapper: whitespace collapsed, full_name built from fname/lname', $m['people'][0]['address'] === '100 MAIN ST STE B' && $m['people'][0]['full_name'] === 'Javier Luis Sample' && $m['people'][0]['title'] === 'Owner');
+$m = $mapper->map($srcRow(102));
+check('mapper: d-M-Y and m-d-Y dates', $m['company']['date_filed'] === '2024-09-05' && $m['company']['effective_date'] === '2024-09-04');
+check('mapper: leading zeros kept', $m['company']['document_number'] === '001800001' && $m['people'][0]['zip_code'] === '01201');
+check('mapper: officers follow the agent, in order', array_column($m['people'], 'role') === ['registered_agent', 'officer', 'officer'] && array_column($m['people'], 'position') === [0, 0, 1]);
+check('mapper: officer state uppercased, ra flag kept', $m['people'][1]['state'] === 'MA' && $m['people'][2]['is_ra'] === true && $m['people'][1]['is_ra'] === false);
+$m = $mapper->map($srcRow(103));
+check('mapper: junk date is NULL, raw text kept', $m['company']['date_filed'] === null && $m['company']['date_filed_raw'] === 'Test date' && $m['company']['effective_date_raw'] === null && $m['company']['is_active'] === false);
+$m = $mapper->map($srcRow(201));
+check('mapper: current format agent fields', $m['people'][0]['address_source'] === 'Smarty' && $m['people'][0]['mailing_full_address'] !== null && $m['people'][0]['phone'] === null && $m['people'][0]['is_agent_company'] === false);
+check('mapper: long values truncated to the column', mb_strlen($m['company']['company_url']) === 2048 && $m['company']['company_url'] !== null);
+check('mapper: snapshot columns copied', $m['company']['qualified'] === 1 && $m['company']['processed'] === 0 && $m['company']['source_user_id'] === 4 && $m['company']['source_date_added'] === '2026-10-14 11:05:22');
+$m = $mapper->map($srcRow(202));
+check('mapper: ZIP+4 normalized', $m['people'][0]['zip_code'] === '60612-4028' && $m['people'][0]['full_name'] === 'TRACY SAMPLE JR' && $m['company']['date_filed'] === '2026-10-13');
+$m = $mapper->map($srcRow(203));
+check('mapper: agent company keeps only the full address', $m['people'][0]['is_agent_company'] === true && $m['people'][0]['address'] === null && $m['people'][0]['full_address'] !== null);
+$m = $mapper->map($srcRow(204));
+check('mapper: officers without address, empty title is NULL', count($m['people']) === 3 && $m['people'][1]['full_name'] === 'ALBANO SAMPLE' && $m['people'][2]['title'] === null && $m['people'][2]['address'] === null);
+$m = $mapper->map($srcRow(205));
+check('mapper: more_info flattened', $m['company']['no_officer_reason'] === 'NO_OFFICER_AVAILABLE' && $m['company']['company_data_found'] === true && $m['people'][0]['no_info_found'] === true);
+$m = $mapper->map($srcRow(206));
+check('mapper: unknown keys are reported, not dropped silently', in_array('unknown key $.company.new_flag', $m['warnings'], true) && in_array('unknown key $.registered_agent.email', $m['warnings'], true));
+check('mapper: known-shape rows produce no warnings', $mapper->map($srcRow(204))['warnings'] === [] && $mapper->map($srcRow(102))['warnings'] === []);
+try {
+    $mapper->map($srcRow(209));
+    check('mapper: data that is not an object is rejected', false);
+} catch (app\services\EinSkipTracing\InvalidSourceRowException $e) {
+    check('mapper: data that is not an object is rejected', str_contains($e->getMessage(), 'id=209'));
+}
+
+$einEnv = ['ENV_FILE' => '/nonexistent/.env'] + $env;
+$pdo->exec('DROP TABLE IF EXISTS manual_companies');
+$pdo->exec('CREATE TABLE manual_companies (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, data LONGTEXT NOT NULL,
+    ignored_validation_count INT DEFAULT 0, qualified INT DEFAULT NULL, processed INT DEFAULT 0, date_added TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)');
+$insSrc = $pdo->prepare('INSERT INTO manual_companies (id, user_id, data, ignored_validation_count, qualified, processed, date_added) VALUES (?, ?, ?, ?, ?, ?, ?)');
+$addSrc = function (array $ids) use ($insSrc, $srcRow) {
+    foreach ($ids as $id) {
+        $r = $srcRow($id);
+        $insSrc->execute([$r['id'], $r['user_id'], $r['data'], $r['ignored_validation_count'], $r['qualified'], $r['processed'], $r['date_added']]);
+    }
+};
+$einCount = fn(string $sql) => (int) $pdo->query($sql)->fetchColumn();
+$addSrc([101, 102]);
+[$code, $out] = $capture('php yii ein-sync/companies', $einEnv);
+check('ein-sync: first run only records the starting point', $code === 0 && str_contains($out, 'starting after manual_companies.id 102') && $einCount('SELECT COUNT(*) FROM ein_companies') === 0, "exit $code: $out");
+$addSrc([103, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210]);
+[$code, $out] = $capture('php yii ein-sync/companies --limit=50', $einEnv);
+check('ein-sync: at most 10 rows per run, bad row skipped and reported', $code === 65 && str_contains($out, 'fetched 10: 9 inserted, 0 updated, 0 unchanged, 1 failed') && str_contains($out, 'Cursor at id 209'), "exit $code: $out");
+check('ein-sync: unknown keys are printed as warnings', str_contains($out, 'manual_companies.id=206: unknown key $.company.new_flag'));
+check('ein-sync: the failure is kept in ein_sync_state.last_error', str_contains((string) $pdo->query("SELECT last_error FROM ein_sync_state")->fetchColumn(), 'id=209'));
+[$code, $out] = $capture('php yii ein-sync/companies', $einEnv);
+check('ein-sync: next run continues after the cursor', $code === 0 && str_contains($out, 'fetched 1: 1 inserted') && str_contains($out, 'Cursor at id 210'), "exit $code: $out");
+[$code, $out] = $capture('php yii ein-sync/companies', $einEnv);
+check('ein-sync: nothing new, nothing done', $code === 0 && str_contains($out, 'fetched 0:'), "exit $code: $out");
+check('ein-sync: rows before the starting point are not copied', $einCount('SELECT COUNT(*) FROM ein_companies') === 10 && $einCount('SELECT COUNT(*) FROM ein_companies WHERE source_id IN (101, 102)') === 0);
+check('ein-sync: agent and officers stored', $einCount("SELECT COUNT(*) FROM ein_company_people p JOIN ein_companies c ON c.id = p.company_id WHERE c.source_id = 204") === 3
+    && $einCount("SELECT COUNT(*) FROM ein_companies WHERE source_id = 202 AND date_filed = '2026-10-13' AND state = 'IL'") === 1);
+$pdo->exec("UPDATE ein_sync_state SET last_source_id = 102");
+$pdo->exec("UPDATE manual_companies SET processed = 1 WHERE id = 201");
+[$code, $out] = $capture('php yii ein-sync/companies', $einEnv);
+check('ein-sync: re-sync rewrites only changed rows', str_contains($out, 'fetched 10: 0 inserted, 1 updated, 8 unchanged, 1 failed'), "exit $code: $out");
+check('ein-sync: re-sync does not duplicate people', $einCount('SELECT COUNT(*) FROM ein_companies') === 10
+    && $einCount("SELECT COUNT(*) FROM ein_company_people p JOIN ein_companies c ON c.id = p.company_id WHERE c.source_id = 201") === 1
+    && $einCount("SELECT processed FROM ein_companies WHERE source_id = 201") === 1);
+
+@mkdir("$root/runtime/mutex", 0775, true);
+$lock = fopen("$root/runtime/mutex/" . md5('ein-sync-companies') . '.lock', 'c');
+flock($lock, LOCK_EX);
+[$code, $out] = $capture('php yii ein-sync/companies', $einEnv);
+check('ein-sync: an overlapping run exits right away', $code === 0 && str_contains($out, 'still going'), "exit $code: $out");
+flock($lock, LOCK_UN);
+fclose($lock);
+[$code, $out] = $capture('php yii ein-sync/companies', array_diff_key($einEnv, ['DB_DSN_EIN_SKIP_TRACING' => 1]));
+check('ein-sync: refuses to run without its settings, naming them', $code === 78 && str_contains($out, 'DB_DSN_EIN_SKIP_TRACING'), "exit $code");
+$probe = 'require "vendor/autoload.php"; require "config/env.php"; require "vendor/yiisoft/yii2/Yii.php"; new yii\console\Application(require "config/console.php");'
+    . ' try { Yii::$app->dbEinSkipTracing->createCommand("UPDATE manual_companies SET processed = 2")->execute(); echo "WROTE"; } catch (Throwable $e) { echo $e->getMessage(); }';
+[$code, $out] = $capture('php -r ' . escapeshellarg($probe), $einEnv);
+check('ein-sync: the source connection is read-only', str_contains($out, 'READ ONLY') && $einCount('SELECT COUNT(*) FROM manual_companies WHERE processed = 2') === 0, $out);
+[$code, $out] = $capture('php yii env/check', ['DB_PASS_EIN_SKIP_TRACING' => 'EIN-SECRET-999'] + $einEnv);
+check('env/check lists the skip-tracing settings without their values', str_contains($out, 'DB_PASS_EIN_SKIP_TRACING') && !str_contains($out, 'EIN-SECRET-999'));
+$pdo->exec('DROP TABLE manual_companies');
 
 echo "\n" . ($checks - $failures) . "/$checks checks passed" . ($failures ? ", $failures FAILED" : '') . ".\n";
 exit($failures ? 1 : 0);
