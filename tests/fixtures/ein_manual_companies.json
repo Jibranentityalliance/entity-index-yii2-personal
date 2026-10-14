@@ -1,0 +1,554 @@
+[
+    {
+        "id": 101,
+        "user_id": 7,
+        "data": {
+            "company": {
+                "state": "TX",
+                "name": "SAMPLE TORTILLA CO LLC",
+                "document_number": "805000001",
+                "type": "LLC",
+                "date_filed": "8/27/24",
+                "effective_date": "8/27/24",
+                "company_url": "",
+                "status": "1"
+            },
+            "registered_agent": {
+                "ra": true,
+                "fname": "Javier Luis",
+                "lname": "Sample",
+                "address": "100  MAIN ST  STE B",
+                "city": "HOUSTON",
+                "state": "TX",
+                "o_title": "Owner",
+                "zip_code": "77036"
+            },
+            "officers": []
+        },
+        "ignored_validation_count": 0,
+        "qualified": null,
+        "processed": 1,
+        "date_added": "2024-08-31 15:08:34"
+    },
+    {
+        "id": 102,
+        "user_id": 7,
+        "data": {
+            "company": {
+                "state": "MA",
+                "name": "EXAMPLE LLC",
+                "document_number": "001800001",
+                "type": "Foreign Limited Liability Company (LLC)",
+                "date_filed": "5-Sep-2024",
+                "effective_date": "09-04-2024",
+                "company_url": "https://example.com/ma",
+                "status": "1"
+            },
+            "registered_agent": {
+                "ra": true,
+                "fname": "ALEX",
+                "lname": "EXAMPLE",
+                "address": "1 TEST AVE",
+                "city": "PITTSFIELD",
+                "state": "MA",
+                "zip_code": "01201"
+            },
+            "officers": [
+                {
+                    "address": "1 TEST AVE",
+                    "city": "PITTSFIELD",
+                    "state": "ma",
+                    "o_title": "Owner",
+                    "zip_code": "01201",
+                    "ra": false,
+                    "fname": "JORDAN",
+                    "lname": "EXAMPLE"
+                },
+                {
+                    "ra": true,
+                    "state": "MA",
+                    "zip_code": "01201",
+                    "fname": "CASEY",
+                    "lname": "EXAMPLE"
+                }
+            ]
+        },
+        "ignored_validation_count": 0,
+        "qualified": null,
+        "processed": 1,
+        "date_added": "2024-09-05 12:45:00"
+    },
+    {
+        "id": 103,
+        "user_id": 100,
+        "data": {
+            "company": {
+                "state": "KY",
+                "name": "Test Company",
+                "document_number": "Test doc #",
+                "type": "Nonprofit Corporation",
+                "date_filed": "Test date",
+                "effective_date": "",
+                "company_url": "x",
+                "status": "0"
+            },
+            "registered_agent": {
+                "ra": true,
+                "fname": "Test",
+                "lname": "Agent",
+                "address": "Test address",
+                "city": "Test city",
+                "state": "NM",
+                "zip_code": "56646"
+            },
+            "officers": []
+        },
+        "ignored_validation_count": 0,
+        "qualified": null,
+        "processed": 1,
+        "date_added": "2024-08-31 15:40:58"
+    },
+    {
+        "id": 201,
+        "user_id": 4,
+        "data": {
+            "company": {
+                "state": "CO",
+                "name": "Flying Sample Productions LLC",
+                "document_number": "20260000001",
+                "type": "Limited Liability Company",
+                "date_filed": "10/14/2026",
+                "effective_date": "10/14/2026",
+                "company_url": "https://www.sos.example/biz?id=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "status": "1",
+                "some_info_found": false,
+                "no_info_found": false
+            },
+            "registered_agent": {
+                "ra": true,
+                "fname": "Pat",
+                "lname": "Sample",
+                "full_name": "Pat Sample",
+                "phone": "",
+                "full_address": "12 Forest View St, Broomfield, CO 80020, US",
+                "address": "12 Forest View St",
+                "city": "Broomfield",
+                "state": "CO",
+                "zip_code": "80020",
+                "mailing_full_address": "12 Forest View St, Broomfield, CO 80020, US",
+                "mailing_address": "",
+                "mailing_city": "",
+                "mailing_state": "",
+                "mailing_zip_code": "",
+                "some_info_found": false,
+                "no_info_found": false,
+                "is_agent_company": false,
+                "source": "Smarty"
+            },
+            "officers": [],
+            "more_info": []
+        },
+        "ignored_validation_count": 0,
+        "qualified": 1,
+        "processed": 0,
+        "date_added": "2026-10-14 11:05:22"
+    },
+    {
+        "id": 202,
+        "user_id": 173,
+        "data": {
+            "company": {
+                "state": "IL",
+                "name": "T&T SAMPLE GROUP LLC",
+                "document_number": "18800001",
+                "type": "LLC",
+                "date_filed": "10-13-2026",
+                "effective_date": "10-13-2026",
+                "company_url": "",
+                "status": "1",
+                "some_info_found": false,
+                "no_info_found": false
+            },
+            "registered_agent": {
+                "ra": true,
+                "fname": "TRACY",
+                "lname": "SAMPLE",
+                "full_name": "TRACY SAMPLE JR",
+                "phone": "",
+                "full_address": "30 W JACKSON BLVD CHICAGO, IL 60612",
+                "address": "30 W Jackson Blvd",
+                "city": "Chicago",
+                "state": "IL",
+                "zip_code": "60612 - 4028",
+                "mailing_full_address": "",
+                "mailing_address": "",
+                "mailing_city": "",
+                "mailing_state": "",
+                "mailing_zip_code": "",
+                "some_info_found": false,
+                "no_info_found": false,
+                "is_agent_company": false,
+                "source": "Smarty"
+            },
+            "officers": [],
+            "more_info": []
+        },
+        "ignored_validation_count": 0,
+        "qualified": 1,
+        "processed": 0,
+        "date_added": "2026-10-14 11:05:23"
+    },
+    {
+        "id": 203,
+        "user_id": 151,
+        "data": {
+            "company": {
+                "state": "UT",
+                "name": "ORYNEX SAMPLE LLC",
+                "document_number": "14700001-0160",
+                "type": "Domestic Limited Liability Company",
+                "date_filed": "10/14/2026",
+                "effective_date": "10/14/2026",
+                "company_url": "",
+                "status": "1",
+                "some_info_found": false,
+                "no_info_found": false
+            },
+            "registered_agent": {
+                "ra": true,
+                "fname": "REGISTERED AGENTS",
+                "lname": "INC",
+                "full_name": "REGISTERED AGENTS INC",
+                "phone": "",
+                "full_address": "7533 S CENTER VIEW CT STE R, WEST JORDAN, UT, 84084, USA",
+                "address": "",
+                "city": "",
+                "state": "",
+                "zip_code": "",
+                "mailing_full_address": "",
+                "mailing_address": "",
+                "mailing_city": "",
+                "mailing_state": "",
+                "mailing_zip_code": "",
+                "some_info_found": false,
+                "no_info_found": false,
+                "is_agent_company": true
+            },
+            "officers": [],
+            "more_info": []
+        },
+        "ignored_validation_count": 0,
+        "qualified": 0,
+        "processed": 0,
+        "date_added": "2026-10-14 11:05:11"
+    },
+    {
+        "id": 204,
+        "user_id": 174,
+        "data": {
+            "company": {
+                "state": "AR",
+                "name": "RIDGEVIEW SAMPLE, LLC",
+                "document_number": "811600001",
+                "type": "Limited Liability Company",
+                "date_filed": "10/08/2026",
+                "effective_date": "10/08/2026",
+                "company_url": "",
+                "status": "1",
+                "some_info_found": false,
+                "no_info_found": false
+            },
+            "registered_agent": {
+                "ra": true,
+                "fname": "ALBANO",
+                "lname": "SAMPLE",
+                "full_name": "ALBANO SAMPLE",
+                "phone": "",
+                "full_address": "50 BOB MILLS RD SPRINGDALE, AR 72762",
+                "address": "50 Bob Mills Rd",
+                "city": "Springdale",
+                "state": "AR",
+                "zip_code": "72762",
+                "mailing_full_address": "",
+                "mailing_address": "",
+                "mailing_city": "",
+                "mailing_state": "",
+                "mailing_zip_code": "",
+                "some_info_found": false,
+                "no_info_found": false,
+                "is_agent_company": false,
+                "source": "Smarty"
+            },
+            "officers": [
+                {
+                    "ra": true,
+                    "fname": "ALBANO",
+                    "lname": "SAMPLE",
+                    "full_name": "ALBANO  SAMPLE",
+                    "address": "",
+                    "city": "",
+                    "state": "",
+                    "o_title": "Member",
+                    "zip_code": "",
+                    "some_info_found": false,
+                    "no_info_found": false
+                },
+                {
+                    "ra": false,
+                    "fname": "John D Cooper",
+                    "lname": "Jr",
+                    "full_name": "John D Cooper Jr",
+                    "address": "",
+                    "city": "",
+                    "state": "",
+                    "o_title": "",
+                    "zip_code": "",
+                    "some_info_found": false,
+                    "no_info_found": false
+                }
+            ],
+            "more_info": []
+        },
+        "ignored_validation_count": 0,
+        "qualified": 1,
+        "processed": 0,
+        "date_added": "2026-10-14 11:05:09"
+    },
+    {
+        "id": 205,
+        "user_id": 105,
+        "data": {
+            "company": {
+                "state": "GA",
+                "name": "SAMPLE PROFIT CORP",
+                "document_number": "0451500001",
+                "type": "Foreign Profit Corporation",
+                "date_filed": "10/12/2026",
+                "effective_date": "10/12/2026",
+                "company_url": "",
+                "status": "1",
+                "some_info_found": false,
+                "no_info_found": false
+            },
+            "registered_agent": {
+                "ra": true,
+                "fname": "CORP",
+                "lname": "SERVICE CO",
+                "full_name": "CORP SERVICE CO",
+                "phone": "",
+                "full_address": "9040 Roswell Road, Suite 500, Atlanta, GA, 30350, USA",
+                "address": "",
+                "city": "",
+                "state": "",
+                "zip_code": "",
+                "mailing_full_address": "",
+                "mailing_address": "",
+                "mailing_city": "",
+                "mailing_state": "",
+                "mailing_zip_code": "",
+                "some_info_found": false,
+                "no_info_found": true,
+                "is_agent_company": true
+            },
+            "officers": [],
+            "more_info": [
+                {
+                    "no_officer_reason": "NO_OFFICER_AVAILABLE",
+                    "company_data_found": true
+                }
+            ]
+        },
+        "ignored_validation_count": 0,
+        "qualified": 0,
+        "processed": 0,
+        "date_added": "2026-10-14 11:04:52"
+    },
+    {
+        "id": 206,
+        "user_id": 18,
+        "data": {
+            "company": {
+                "state": "MI",
+                "name": "BIG BAY SAMPLE LLC",
+                "document_number": "802000001",
+                "type": "Domestic Limited Liability Company",
+                "date_filed": "10/14/2026",
+                "effective_date": "10/14/2026",
+                "company_url": "",
+                "new_flag": "x",
+                "status": "1",
+                "some_info_found": false,
+                "no_info_found": false
+            },
+            "registered_agent": {
+                "ra": true,
+                "fname": "Robin",
+                "lname": "Sample",
+                "full_name": "Robin Sample",
+                "phone": "",
+                "full_address": "305 DEUTSCH AVE, BIG BAY, MI 49808",
+                "address": "305 Deutsch Ave",
+                "city": "Big Bay",
+                "state": "MI",
+                "zip_code": "49808",
+                "mailing_full_address": "",
+                "mailing_address": "",
+                "mailing_city": "",
+                "mailing_state": "",
+                "mailing_zip_code": "",
+                "some_info_found": false,
+                "no_info_found": false,
+                "is_agent_company": false,
+                "source": "Google",
+                "email": "r@example.com"
+            },
+            "officers": [],
+            "more_info": []
+        },
+        "ignored_validation_count": 0,
+        "qualified": 1,
+        "processed": 0,
+        "date_added": "2026-10-14 11:03:24"
+    },
+    {
+        "id": 207,
+        "user_id": 4,
+        "data": {
+            "company": {
+                "state": "CO",
+                "name": "ROW 207 LLC",
+                "document_number": "20260000207",
+                "type": "LLC",
+                "date_filed": "10/14/2026",
+                "effective_date": "10/14/2026",
+                "company_url": "",
+                "status": "1",
+                "some_info_found": false,
+                "no_info_found": false
+            },
+            "registered_agent": {
+                "ra": true,
+                "fname": "A",
+                "lname": "B",
+                "full_name": "A B",
+                "phone": "",
+                "full_address": "X",
+                "address": "",
+                "city": "",
+                "state": "",
+                "zip_code": "",
+                "mailing_full_address": "",
+                "mailing_address": "",
+                "mailing_city": "",
+                "mailing_state": "",
+                "mailing_zip_code": "",
+                "some_info_found": false,
+                "no_info_found": false,
+                "is_agent_company": true
+            },
+            "officers": [],
+            "more_info": []
+        },
+        "ignored_validation_count": 0,
+        "qualified": 0,
+        "processed": 0,
+        "date_added": "2026-10-14 11:06:00"
+    },
+    {
+        "id": 208,
+        "user_id": 4,
+        "data": {
+            "company": {
+                "state": "CO",
+                "name": "ROW 208 LLC",
+                "document_number": "20260000208",
+                "type": "LLC",
+                "date_filed": "10/14/2026",
+                "effective_date": "10/14/2026",
+                "company_url": "",
+                "status": "1",
+                "some_info_found": false,
+                "no_info_found": false
+            },
+            "registered_agent": {
+                "ra": true,
+                "fname": "A",
+                "lname": "B",
+                "full_name": "A B",
+                "phone": "",
+                "full_address": "X",
+                "address": "",
+                "city": "",
+                "state": "",
+                "zip_code": "",
+                "mailing_full_address": "",
+                "mailing_address": "",
+                "mailing_city": "",
+                "mailing_state": "",
+                "mailing_zip_code": "",
+                "some_info_found": false,
+                "no_info_found": false,
+                "is_agent_company": true
+            },
+            "officers": [],
+            "more_info": []
+        },
+        "ignored_validation_count": 0,
+        "qualified": 0,
+        "processed": 0,
+        "date_added": "2026-10-14 11:06:01"
+    },
+    {
+        "id": 209,
+        "user_id": 4,
+        "data": "not an object",
+        "ignored_validation_count": 0,
+        "qualified": null,
+        "processed": 0,
+        "date_added": "2026-10-14 11:06:02"
+    },
+    {
+        "id": 210,
+        "user_id": 4,
+        "data": {
+            "company": {
+                "state": "CO",
+                "name": "ROW 210 LLC",
+                "document_number": "20260000210",
+                "type": "LLC",
+                "date_filed": "10/14/2026",
+                "effective_date": "10/14/2026",
+                "company_url": "",
+                "status": "1",
+                "some_info_found": false,
+                "no_info_found": false
+            },
+            "registered_agent": {
+                "ra": true,
+                "fname": "A",
+                "lname": "B",
+                "full_name": "A B",
+                "phone": "",
+                "full_address": "X",
+                "address": "",
+                "city": "",
+                "state": "",
+                "zip_code": "",
+                "mailing_full_address": "",
+                "mailing_address": "",
+                "mailing_city": "",
+                "mailing_state": "",
+                "mailing_zip_code": "",
+                "some_info_found": false,
+                "no_info_found": false,
+                "is_agent_company": true
+            },
+            "officers": [],
+            "more_info": []
+        },
+        "ignored_validation_count": 0,
+        "qualified": 0,
+        "processed": 0,
+        "date_added": "2026-10-14 11:06:03"
+    }
+]

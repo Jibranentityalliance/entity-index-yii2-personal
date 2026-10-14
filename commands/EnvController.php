@@ -16,7 +16,7 @@ use yii\helpers\Console;
  */
 class EnvController extends Controller
 {
-    private const SECRET = ['DB_USER', 'DB_PASS', 'COOKIE_VALIDATION_KEY', 'DB_DSN'];
+    private const SECRET = ['DB_USER', 'DB_PASS', 'COOKIE_VALIDATION_KEY', 'DB_DSN', 'DB_DSN_EIN_SKIP_TRACING', 'DB_USER_EIN_SKIP_TRACING', 'DB_PASS_EIN_SKIP_TRACING'];
 
     public function actionCheck(): int
     {
@@ -46,14 +46,15 @@ class EnvController extends Controller
         foreach (envRequiredKeys() as $k) {
             $set = env($k) !== null;
             $ok = $ok && $set;
-            $this->stdout(sprintf("  %-24s %s\n", $k, $set ? 'set' : 'MISSING'), $set ? Console::FG_GREEN : Console::FG_RED);
+            $this->stdout(sprintf("  %-26s %s\n", $k, $set ? 'set' : 'MISSING'), $set ? Console::FG_GREEN : Console::FG_RED);
         }
 
         $this->stdout("\nOptional settings:\n");
-        foreach (['DB_PASS' => '', 'YII_ENV' => 'prod', 'YII_DEBUG' => '', 'SITE_MODE' => 'live', 'SITE_NOINDEX' => 'true', 'ADMIN_EMAIL' => ''] as $k => $default) {
+        foreach (['DB_PASS' => '', 'YII_ENV' => 'prod', 'YII_DEBUG' => '', 'SITE_MODE' => 'live', 'SITE_NOINDEX' => 'true', 'ADMIN_EMAIL' => '',
+            'DB_DSN_EIN_SKIP_TRACING' => '', 'DB_USER_EIN_SKIP_TRACING' => '', 'DB_PASS_EIN_SKIP_TRACING' => ''] as $k => $default) {
             $v = env($k);
             $shown = $v === null ? ($default !== '' ? "not set (default: $default)" : 'not set') : (in_array($k, self::SECRET, true) ? 'set' : "set ($v)");
-            $this->stdout(sprintf("  %-24s %s\n", $k, $shown));
+            $this->stdout(sprintf("  %-26s %s\n", $k, $shown));
         }
         $this->stdout(sprintf("\nEffective: environment=%s debug=%s noindex=%s\n", YII_ENV, YII_DEBUG ? 'on' : 'off', envBool('SITE_NOINDEX', true) ? 'ON (search engines blocked)' : 'OFF (indexable)'));
 
