@@ -26,7 +26,7 @@ class StatsController extends Controller
         }
         try {
             $p = Yii::$app->params;
-            $s = (new MirrorStats(Yii::$app->db, $p['mirrorDb'], new \DateTimeZone($p['mirrorTz'])))->refresh();
+            $s = (new MirrorStats(Yii::$app->db, $p['mirrorDb'], new \DateTimeZone($p['mirrorTz']), new \DateTimeZone($p['reportTz'])))->refresh();
         } catch (\Throwable $e) {
             Yii::error($e, __METHOD__);
             $this->stderr(gmdate('Y-m-d H:i:s') . ' stats/refresh failed: ' . get_class($e) . ': ' . $e->getMessage() . "\n", Console::FG_RED);

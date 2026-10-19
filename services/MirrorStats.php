@@ -17,7 +17,7 @@ use yii\db\Query;
  *
  * - total: an exact COUNT(*) at most once a day, plus the rows added since (cheap primary-key range count).
  * - recent: walks back from the newest id in batches until 30 days of rows are covered (ids follow date_added).
- * - `date_added` is in the portal server's time zone (MIRROR_TZ); everything stored here is UTC.
+ * - `date_added` is read in MIRROR_TZ (UTC on the servers); calendar days are counted in REPORT_TZ; stored times are UTC.
  * - The activity feed keeps only entity type, state and time: no names or people, the home page is public.
  */
 class MirrorStats
@@ -33,6 +33,7 @@ class MirrorStats
         private Connection $db,
         private string $mirrorDb,
         private \DateTimeZone $sourceTz,
+        private \DateTimeZone $reportTz,
         private ?\DateTimeImmutable $now = null,
     ) {
         $this->now ??= new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
@@ -57,7 +58,7 @@ class MirrorStats
     {
         $table = $this->db->quoteTableName($this->mirrorDb . '.manual_companies');
         $nowUtc = $this->now->setTimezone(new \DateTimeZone('UTC'));
-        $today = $this->now->setTimezone($this->sourceTz)->setTime(0, 0);
+        $today = $this->now->setTimezone($this->reportTz)->setTime(0, 0);
 
         $days = [];
         for ($i = self::SERIES_DAYS - 1; $i >= 0; $i--) {
@@ -100,7 +101,7 @@ class MirrorStats
                 if ($state) {
                     $states30[$state] = true;
                 }
-                $day = $added->setTimezone($this->sourceTz)->format('Y-m-d');
+                $day = $added->setTimezone($this->reportTz)->format('Y-m-d');
                 if (isset($days[$day])) {
                     $days[$day]++;
                 }
@@ -113,7 +114,7 @@ class MirrorStats
                         $states7[$state] = ($states7[$state] ?? 0) + 1;
                     }
                     if ($c['date_filed'] !== null) {
-                        $lag = (int) (new \DateTimeImmutable($c['date_filed'], $this->sourceTz))->diff($added->setTimezone($this->sourceTz)->setTime(0, 0))->format('%r%a');
+                        $lag = (int) (new \DateTimeImmutable($c['date_filed'], $this->reportTz))->diff($added->setTimezone($this->reportTz)->setTime(0, 0))->format('%r%a');
                         if ($lag >= 0 && $lag <= 365) {
                             $lags[] = $lag;
                         }

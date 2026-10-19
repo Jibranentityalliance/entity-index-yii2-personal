@@ -138,8 +138,8 @@ Then add it to the web user's crontab (`sudo crontab -u daemon -e`; `www-data` o
 
 The home page shows live numbers (companies in the database, added in the last 24 hours / 7 days, busiest states,
 the latest additions without names) computed from the replicated `manual_companies` table that MariaDB replication keeps
-on this server (database `MIRROR_DB`, default `ein_skip_tracing`; `date_added` is read in `MIRROR_TZ`, default
-`America/New_York`). The site's DB user needs `SELECT` on that database.
+on this server (database `MIRROR_DB`, default `ein_skip_tracing`; `date_added` is read in `MIRROR_TZ`, default `UTC`, which is
+what a TIMESTAMP column returns on these servers; calendar days are counted in `REPORT_TZ`, default `America/New_York`). The site's DB user needs `SELECT` on that database.
 
 ```bash
 php yii migrate --interactive=0           # creates site_stats

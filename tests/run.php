@@ -411,7 +411,7 @@ $h = new Http('http://127.0.0.1:18086');
 $check0 = $h->get('/')['body'];
 check('home renders before the first stats run', str_contains($check0, 'once the first data refresh has run'));
 $testDb = preg_match('/dbname=([^;]+)/', $dsn, $mm) ? $mm[1] : '';
-$statsEnv = ['MIRROR_DB' => $testDb, 'MIRROR_TZ' => 'America/New_York'] + $einEnv;
+$statsEnv = ['MIRROR_DB' => $testDb, 'MIRROR_TZ' => 'America/New_York', 'REPORT_TZ' => 'America/New_York'] + $einEnv;
 // Make the fixture rows recent: 201..210 within the last day, 101..103 older than 30 days.
 $pdo->exec("UPDATE manual_companies SET date_added = CONVERT_TZ(UTC_TIMESTAMP() - INTERVAL (210 - id) * 30 MINUTE, '+00:00', 'America/New_York') WHERE id >= 201");
 $pdo->exec("UPDATE manual_companies SET date_added = '2024-01-01 00:00:00' WHERE id < 201");
