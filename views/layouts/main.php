@@ -26,7 +26,7 @@ if (Yii::$app->params['noindex']) {
 } elseif (!empty($this->params['noindex'])) {
     $this->registerMetaTag(['name' => 'robots', 'content' => 'noindex,follow']);    // per-page (search results, legal drafts)
 }
-$title = $this->title ? $this->title . ' | EntityIndex' : 'EntityIndex — New US business filings, searchable within 24 hours';
+$title = $this->title ? $this->title . ' | EntityIndex' : 'EntityIndex — New US businesses for agents, every day';
 ?>
 <?php $this->beginPage() ?>
 <!DOCTYPE html>
