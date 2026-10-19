@@ -134,6 +134,28 @@ Then add it to the web user's crontab (`sudo crontab -u daemon -e`; `www-data` o
   `ein_sync_state.last_error`. Unknown JSON keys are logged as warnings, so the schema can be extended.
 - To re-copy rows, lower `ein_sync_state.last_source_id`. Rows already copied are only rewritten if they changed.
 
+## 7b. Home-page numbers from the replicated portal data (cron)
+
+The home page shows live numbers (companies in the database, added in the last 24 hours / 7 days, busiest states,
+the latest additions without names) computed from the replicated `manual_companies` table that MariaDB replication keeps
+on this server (database `MIRROR_DB`, default `ein_skip_tracing`; `date_added` is read in `MIRROR_TZ`, default
+`America/New_York`). The site's DB user needs `SELECT` on that database.
+
+```bash
+php yii migrate --interactive=0           # creates site_stats
+sudo -u www-data php yii stats/refresh    # first run; prints the numbers
+```
+
+Then add it to the web user's crontab (`sudo crontab -u www-data -e`), every 5 minutes:
+
+```cron
+*/5 * * * * cd /var/www/entityindex && php yii stats/refresh >> runtime/logs/stats.log 2>&1
+```
+
+- The web request never queries the mirror; it reads the one `site_stats` row written by this job.
+- An exact `COUNT(*)` runs at most once a day; in between the total adds rows with a higher id.
+- Until the first run the home page shows dashes and a note instead of numbers.
+
 ## 8. Launch checklist
 
 1. `SITE_MODE=coming_soon` until the real data pipeline is loading; check `/coming-soon`, `/opt-out`, `/legal/terms`.

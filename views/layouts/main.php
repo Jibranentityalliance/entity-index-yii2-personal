@@ -13,7 +13,7 @@ $this->registerCsrfMetaTags();
 $this->registerMetaTag(['charset' => Yii::$app->charset], 'charset');
 $this->registerMetaTag(['name' => 'viewport', 'content' => 'width=device-width, initial-scale=1, shrink-to-fit=no']);
 if (!isset($this->params['description'])) {
-    $this->registerMetaTag(['name' => 'description', 'content' => 'Search every new LLC and corporation from all 50 states and DC within 24 hours of filing. Daily alerts, API and bulk files.'], 'description');
+    $this->registerMetaTag(['name' => 'description', 'content' => 'Newly registered LLCs and corporations, delivered to your agents every day with filing details, registered agents and officers.'], 'description');
 } else {
     $this->registerMetaTag(['name' => 'description', 'content' => $this->params['description']], 'description');
 }
@@ -76,7 +76,7 @@ $title = $this->title ? $this->title . ' | EntityIndex' : 'EntityIndex — New U
         <div class="row g-4">
             <div class="col-lg-5">
                 <a class="logo" href="<?= Url::to(['/site/index']) ?>">EntityIndex</a>
-                <p class="text-muted small mt-2" style="max-width:340px">New business entities from all 50 states and DC, searchable within 24 hours of filing. Every record links back to the official state source.</p>
+                <p class="text-muted small mt-2" style="max-width:340px">Newly registered US businesses for agents and sales teams, updated every day.</p>
             </div>
             <div class="col-6 col-lg-2">
                 <h4>Product</h4>

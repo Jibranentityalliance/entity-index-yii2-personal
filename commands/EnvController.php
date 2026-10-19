@@ -51,7 +51,7 @@ class EnvController extends Controller
 
         $this->stdout("\nOptional settings:\n");
         foreach (['DB_PASS' => '', 'YII_ENV' => 'prod', 'YII_DEBUG' => '', 'SITE_MODE' => 'live', 'SITE_NOINDEX' => 'true', 'ADMIN_EMAIL' => '',
-            'DB_DSN_EIN_SKIP_TRACING' => '', 'DB_USER_EIN_SKIP_TRACING' => '', 'DB_PASS_EIN_SKIP_TRACING' => ''] as $k => $default) {
+            'MIRROR_DB' => 'ein_skip_tracing', 'MIRROR_TZ' => 'America/New_York', 'DB_DSN_EIN_SKIP_TRACING' => '', 'DB_USER_EIN_SKIP_TRACING' => '', 'DB_PASS_EIN_SKIP_TRACING' => ''] as $k => $default) {
             $v = env($k);
             $shown = $v === null ? ($default !== '' ? "not set (default: $default)" : 'not set') : (in_array($k, self::SECRET, true) ? 'set' : "set ($v)");
             $this->stdout(sprintf("  %-26s %s\n", $k, $shown));

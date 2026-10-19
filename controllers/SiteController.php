@@ -3,7 +3,7 @@
 namespace app\controllers;
 
 use app\models\ContactMessage;
-use app\services\EntityRepository;
+use app\services\MirrorStats;
 use Yii;
 use yii\web\Controller;
 use yii\web\ErrorAction;
@@ -17,18 +17,8 @@ class SiteController extends Controller
 
     public function actionIndex()
     {
-        $stats = EntityRepository::stateStats();
-        $latestDay = EntityRepository::latestFilingDay();
-        $lags = array_values(array_filter(array_column($stats, 'medianLagHours'), fn($x) => $x !== null));
-        sort($lags);
-        return $this->render('index', [
-            'latestDay' => $latestDay,
-            'latestCount' => $latestDay ? EntityRepository::listByDay($latestDay, null, 1, 1)['total'] : 0,
-            'jurisdictions' => count($stats),
-            'total' => EntityRepository::totalCount(),
-            'medianLag' => $lags ? $lags[intdiv(count($lags), 2)] : null,
-            'week' => array_sum(array_column($stats, 'last7Days')),
-        ]);
+        // Numbers come from site_stats, refreshed by `php yii stats/refresh` (cron); null until its first run.
+        return $this->render('index', ['stats' => MirrorStats::load(Yii::$app->db)]);
     }
 
     public function actionFeatures()
@@ -55,11 +45,10 @@ class SiteController extends Controller
     public function actionComingSoon()
     {
         $this->layout = 'bare';
-        $day = EntityRepository::latestFilingDay();
+        $s = MirrorStats::load(Yii::$app->db) ?? [];
         return $this->render('coming-soon', [
-            'day' => $day,
-            'today' => $day ? EntityRepository::listByDay($day, null, 1, 1)['total'] : 0,
-            'jurisdictions' => count(EntityRepository::stateStats()),
+            'today' => $s['last_24h'] ?? 0,
+            'jurisdictions' => $s['states_30d'] ?? 0,
         ]);
     }
 }

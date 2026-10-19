@@ -110,7 +110,7 @@ run('php yii seed/all', $env, $root);
 $srv = startServer(18080, $env, $root);
 $h = new Http('http://127.0.0.1:18080');
 echo "Public pages\n";
-foreach (['/' => 'Every new US business', '/features' => 'Features', '/pricing' => 'Priced for teams', '/faq' => 'Frequently asked questions',
+foreach (['/' => 'Reach new businesses the day they register', '/features' => 'Features', '/pricing' => 'Priced for teams', '/faq' => 'Frequently asked questions',
     '/about' => 'About EntityIndex', '/contact' => 'Contact us', '/opt-out' => 'Remove my information', '/legal/privacy' => 'Privacy Policy', '/legal/terms' => 'Terms of Service'] as $path => $needle) {
     $r = $h->get($path);
     check("GET $path is 200", $r['status'] === 200, (string) $r['status']);
@@ -318,6 +318,7 @@ proc_terminate($srv2);
 echo "EIN skip-tracing sync\n";
 require_once "$root/services/EinSkipTracing/InvalidSourceRowException.php";
 require_once "$root/services/EinSkipTracing/ManualCompanyMapper.php";
+require_once "$root/services/MirrorStats.php";
 $fixture = array_column(json_decode(file_get_contents("$root/tests/fixtures/ein_manual_companies.json"), true), null, 'id');
 $srcRow = fn(int $id) => ['data' => json_encode($fixture[$id]['data'])] + $fixture[$id];
 $mapper = new app\services\EinSkipTracing\ManualCompanyMapper();
@@ -404,6 +405,31 @@ $probe = 'require "vendor/autoload.php"; require "config/env.php"; require "vend
 check('ein-sync: the source connection is read-only', str_contains($out, 'READ ONLY') && $einCount('SELECT COUNT(*) FROM manual_companies WHERE processed = 2') === 0, $out);
 [$code, $out] = $capture('php yii env/check', ['DB_PASS_EIN_SKIP_TRACING' => 'EIN-SECRET-999'] + $einEnv);
 check('env/check lists the skip-tracing settings without their values', str_contains($out, 'DB_PASS_EIN_SKIP_TRACING') && !str_contains($out, 'EIN-SECRET-999'));
+echo "Home page numbers (stats/refresh)\n";
+$srvS = startServer(18086, $env, $root);
+$h = new Http('http://127.0.0.1:18086');
+$check0 = $h->get('/')['body'];
+check('home renders before the first stats run', str_contains($check0, 'once the first data refresh has run'));
+$testDb = preg_match('/dbname=([^;]+)/', $dsn, $mm) ? $mm[1] : '';
+$statsEnv = ['MIRROR_DB' => $testDb, 'MIRROR_TZ' => 'America/New_York'] + $einEnv;
+// Make the fixture rows recent: 201..210 within the last day, 101..103 older than 30 days.
+$pdo->exec("UPDATE manual_companies SET date_added = CONVERT_TZ(UTC_TIMESTAMP() - INTERVAL (210 - id) * 30 MINUTE, '+00:00', 'America/New_York') WHERE id >= 201");
+$pdo->exec("UPDATE manual_companies SET date_added = '2024-01-01 00:00:00' WHERE id < 201");
+[$code, $out] = $capture('php yii stats/refresh', $statsEnv);
+check('stats/refresh runs and reports the numbers', $code === 0 && str_contains($out, 'total 13') && str_contains($out, 'last 24h 9'), "exit $code: $out");
+$st = json_decode((string) $pdo->query("SELECT data FROM site_stats WHERE name = 'landing'")->fetchColumn(), true);
+check('stats: 14 daily buckets, today last', count($st['daily'] ?? []) === 14 && array_sum(array_column($st['daily'], 'count')) === 9, json_encode($st['daily'] ?? null));
+check('stats: feed keeps only type, state and time (no names)', ($st['feed'][0] ?? null) !== null && array_keys($st['feed'][0]) === ['type', 'state', 'at']);
+check('stats: invalid states are not counted', $st['states_30d'] >= 1 && !in_array('XX', array_column($st['top_states_7d'], 'code'), true));
+$pdo->exec("INSERT INTO manual_companies (id, user_id, data, date_added) SELECT 211, user_id, data, date_added FROM manual_companies WHERE id = 210");
+[$code, $out] = $capture('php yii stats/refresh', $statsEnv);
+check('stats: total adds rows newer than the daily base count', str_contains($out, 'total 14'), $out);
+$home = $h->get('/')['body'];
+check('home shows the refreshed numbers', str_contains($home, '>14<') && str_contains($home, 'New companies added per day') && str_contains($home, 'Live numbers, updated'));
+check('home feed shows no company names', !str_contains($home, 'ROW 210 LLC') && !str_contains($home, 'SAVITUR') && str_contains($home, 'New LLC'));
+check('stats: entity kinds', app\services\MirrorStats::entityKind('Foreign Limited Liab') === 'Foreign LLC' && app\services\MirrorStats::entityKind('S-Corp') === 'Corporation'
+    && app\services\MirrorStats::entityKind('Limited Partnership') === 'Partnership' && app\services\MirrorStats::entityKind('') === 'Business');
+proc_terminate($srvS);
 $pdo->exec('DROP TABLE manual_companies');
 
 echo "\n" . ($checks - $failures) . "/$checks checks passed" . ($failures ? ", $failures FAILED" : '') . ".\n";

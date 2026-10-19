@@ -8,6 +8,9 @@ return [
     'siteMode' => env('SITE_MODE', 'live'), // live | coming_soon
     // Tell search engines not to index anything (meta tag + X-Robots-Tag header). Set SITE_NOINDEX=false at launch.
     'noindex' => envBool('SITE_NOINDEX', true), // fail-safe: stays ON unless explicitly set to false
+    // Database (same server) holding the replicated portal table manual_companies, and the time zone of its date_added.
+    'mirrorDb' => env('MIRROR_DB', 'ein_skip_tracing'),
+    'mirrorTz' => env('MIRROR_TZ', 'America/New_York'),
 
     // Proposed prices — change here; the pricing page and home page read from this list.
     'tiers' => [
