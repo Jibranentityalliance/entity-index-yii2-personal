@@ -110,7 +110,7 @@ run('php yii seed/all', $env, $root);
 $srv = startServer(18080, $env, $root);
 $h = new Http('http://127.0.0.1:18080');
 echo "Public pages\n";
-foreach (['/' => 'Reach new businesses the day they register', '/features' => 'Features', '/pricing' => 'Priced for teams', '/faq' => 'Frequently asked questions',
+foreach (['/' => 'Find new businesses', '/features' => 'Features', '/pricing' => 'Priced for teams', '/faq' => 'Frequently asked questions',
     '/about' => 'About EntityIndex', '/contact' => 'Contact us', '/opt-out' => 'Remove my information', '/legal/privacy' => 'Privacy Policy', '/legal/terms' => 'Terms of Service'] as $path => $needle) {
     $r = $h->get($path);
     check("GET $path is 200", $r['status'] === 200, (string) $r['status']);
@@ -420,12 +420,13 @@ check('stats/refresh runs and reports the numbers', $code === 0 && str_contains(
 $st = json_decode((string) $pdo->query("SELECT data FROM site_stats WHERE name = 'landing'")->fetchColumn(), true);
 check('stats: 14 daily buckets, today last', count($st['daily'] ?? []) === 14 && array_sum(array_column($st['daily'], 'count')) === 9, json_encode($st['daily'] ?? null));
 check('stats: feed keeps only type, state and time (no names)', ($st['feed'][0] ?? null) !== null && array_keys($st['feed'][0]) === ['type', 'state', 'at']);
+check('stats: entity types counted for the last 30 days', array_sum($st['types_30d'] ?? []) === 9);
 check('stats: invalid states are not counted', $st['states_30d'] >= 1 && !in_array('XX', array_column($st['top_states_7d'], 'code'), true));
 $pdo->exec("INSERT INTO manual_companies (id, user_id, data, date_added) SELECT 211, user_id, data, date_added FROM manual_companies WHERE id = 210");
 [$code, $out] = $capture('php yii stats/refresh', $statsEnv);
 check('stats: total adds rows newer than the daily base count', str_contains($out, 'total 14'), $out);
 $home = $h->get('/')['body'];
-check('home shows the refreshed numbers', str_contains($home, '>14<') && str_contains($home, 'New companies added per day') && str_contains($home, 'Live numbers, updated'));
+check('home shows the refreshed numbers', str_contains($home, '>14<') && str_contains($home, 'in 30 days') && str_contains($home, 'companies in the index · updated'));
 check('home feed shows no company names', !str_contains($home, 'ROW 210 LLC') && !str_contains($home, 'SAVITUR') && str_contains($home, 'New LLC'));
 check('stats: entity kinds', app\services\MirrorStats::entityKind('Foreign Limited Liab') === 'Foreign LLC' && app\services\MirrorStats::entityKind('S-Corp') === 'Corporation'
     && app\services\MirrorStats::entityKind('Limited Partnership') === 'Partnership' && app\services\MirrorStats::entityKind('') === 'Business');

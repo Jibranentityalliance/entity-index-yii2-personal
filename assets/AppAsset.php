@@ -11,7 +11,8 @@ class AppAsset extends AssetBundle
     public $baseUrl = '@web';
     public $css = [
         'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
-        'css/site.css?v=1',
+        'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap',
+        'css/site.css?v=2',
     ];
     public $js = [
         'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',

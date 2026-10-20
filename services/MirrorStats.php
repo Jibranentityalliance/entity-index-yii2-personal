@@ -50,7 +50,12 @@ class MirrorStats
     /** The last stored numbers, or null when stats/refresh has never run. */
     public static function load(Connection $db): ?array
     {
-        $json = (new Query())->select('data')->from('site_stats')->where(['name' => self::NAME])->scalar($db);
+        try {
+            $json = (new Query())->select('data')->from('site_stats')->where(['name' => self::NAME])->scalar($db);
+        } catch (\yii\db\Exception $e) {
+            \Yii::warning('site_stats unavailable (run php yii migrate): ' . $e->getMessage(), __METHOD__);
+            return null; // pages fall back to dashes instead of an error
+        }
         return $json === false ? null : json_decode($json, true);
     }
 
@@ -70,7 +75,7 @@ class MirrorStats
 
         $mapper = new ManualCompanyMapper();
         $last24h = $last7d = $scanned = 0;
-        $states30 = $states7 = $lags = $feed = [];
+        $states30 = $states7 = $types30 = $lags = $feed = [];
         $newestAt = null;
         $before = PHP_INT_MAX;
         $done = false;
@@ -101,6 +106,8 @@ class MirrorStats
                 if ($state) {
                     $states30[$state] = true;
                 }
+                $kind = self::entityKind($c['entity_type']);
+                $types30[$kind] = ($types30[$kind] ?? 0) + 1;
                 $day = $added->setTimezone($this->reportTz)->format('Y-m-d');
                 if (isset($days[$day])) {
                     $days[$day]++;
@@ -121,7 +128,7 @@ class MirrorStats
                     }
                 }
                 if (count($feed) < self::FEED_SIZE && $state) {
-                    $feed[] = ['type' => self::entityKind($c['entity_type']), 'state' => $state, 'at' => $added->format('Y-m-d\TH:i:s\Z')];
+                    $feed[] = ['type' => $kind, 'state' => $state, 'at' => $added->format('Y-m-d\TH:i:s\Z')];
                 }
             }
         }
@@ -132,6 +139,7 @@ class MirrorStats
             $top[] = ['code' => $code, 'name' => States::name($code), 'count' => $n];
         }
         sort($lags);
+        arsort($types30);
 
         return [
             'computed_at' => $nowUtc->format('Y-m-d\TH:i:s\Z'),
@@ -143,6 +151,7 @@ class MirrorStats
             'median_lag_days' => $lags ? $lags[intdiv(count($lags), 2)] : null,
             'daily' => array_map(fn($d, $n) => ['day' => $d, 'count' => $n], array_keys($days), $days),
             'top_states_7d' => $top,
+            'types_30d' => $types30,
             'feed' => $feed,
         ];
     }

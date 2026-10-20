@@ -4,15 +4,12 @@
 /** @var array|null $stats from site_stats (app\services\MirrorStats), null until `php yii stats/refresh` has run */
 
 use app\helpers\Fmt;
+use app\helpers\States;
 use yii\helpers\Html;
 use yii\helpers\Url;
 
 $this->title = null;
 $this->params['canonical'] = '/';
-$faqAll = require Yii::getAlias('@app/config/faq.php');
-$faq = array_values(array_filter($faqAll, fn($f) => in_array($f[1], [
-    'Do I need an account to search?', 'Do you include phone numbers and emails?', 'When do paid plans open?', 'Is this data legal to use for marketing?',
-], true)));
 
 $s = $stats ?? [];
 $num = fn(string $k) => isset($s[$k]) ? Fmt::num($s[$k]) : '—';
@@ -28,184 +25,183 @@ $ago = function (?string $iso): string {
         default => intdiv($min, 1440) . 'd ago',
     };
 };
-$daily = $s['daily'] ?? [];
-$maxDay = max(array_merge([1], array_column($daily, 'count')));
-$top = $s['top_states_7d'] ?? [];
-$maxTop = max(array_merge([1], array_column($top, 'count')));
 $lag = $s['median_lag_days'] ?? null;
 
-$record = [
-    ['Company', 'Name, state, filing number, entity type, status and filing date'],
-    ['Registered agent', 'Who receives legal notices for the business, with address'],
-    ['Officers & owners', 'Names, titles and addresses on paid plans'],
-    ['Daily new-filings feed', 'Every company added today, state by state'],
-    ['Search', 'By company, officer, agent or filing number, with state and date filters'],
-    ['Alerts, exports & API', 'Saved-search alerts, CSV export and API access are coming with paid plans'],
+// What can be found: entity kinds with how many were added in the last 30 days ("Foreign LLC" etc. count under Foreign).
+$types = ['LLC' => 0, 'Corporation' => 0, 'Nonprofit' => 0, 'Partnership' => 0, 'Foreign' => 0];
+foreach ($s['types_30d'] ?? [] as $kind => $n) {
+    $key = str_starts_with($kind, 'Foreign') ? 'Foreign' : $kind;
+    if (isset($types[$key])) {
+        $types[$key] += $n;
+    }
+}
+$hasTypes = array_sum($types) > 0;
+$typeInfo = [
+    'LLC' => ['Limited liability companies', 'M4 7h16M4 12h16M4 17h10'],
+    'Corporation' => ['Corporations and S-Corps', 'M4 20V8l8-4 8 4v12M9 20v-6h6v6'],
+    'Nonprofit' => ['Nonprofit corporations', 'M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z'],
+    'Partnership' => ['LPs and LLPs', 'M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm8 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3 20c0-3 2.5-5 5-5s5 2 5 5m-2-5c.8-.6 2-1 3-1 2.5 0 5 2 5 5'],
+    'Foreign' => ['Registered from another state', 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z'],
 ];
 $steps = [
-    ['Find', 'Open the daily feed or search by state, entity type and filing date to see who just registered.'],
-    ['Qualify', 'Check the company record, registered agent and officers to decide who is worth a call.'],
-    ['Reach out first', 'Contact new owners while they are still choosing an insurer, accountant, bank or vendor.'],
+    ['We track new registrations', 'Every day we pick up the LLCs, corporations and nonprofits that were just registered with the state.', 'M21 21l-4.3-4.3M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15z'],
+    ['We build the company record', 'Each business gets one clean record: filing details, status, registered agent and the officers behind it.', 'M9 12l2 2 4-4M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z'],
+    ['Your agents reach out first', 'Your team works today’s list and contacts new owners while they are still choosing who to work with.', 'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z'],
 ];
+$icon = fn(string $d, int $size = 22) => '<svg width="' . $size . '" height="' . $size . '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' . $d . '"/></svg>';
+$check = '<svg class="lp-check" width="18" height="18" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 ?>
-<section class="hero hero-v2">
-    <div class="container">
-        <div class="row align-items-center gy-4 gx-lg-5">
-            <div class="col-lg-7">
-                <p class="mb-3">
-                    <span class="badge-pill-ei ok"><span class="live-dot"></span>
-                        <?= isset($s['last_24h']) ? Fmt::num($s['last_24h']) . ' companies added in the last 24 hours' : 'Live data' ?></span>
-                </p>
-                <h1>Reach new businesses the day they register.</h1>
-                <p class="lede">EntityIndex gives your agents a fresh list of newly registered LLCs and corporations every day, with the filing details,
-                    registered agent and officers they need to make the first call.</p>
-                <div class="d-flex flex-wrap gap-2">
-                    <a href="<?= Url::to(['/portal/auth/register']) ?>" class="btn btn-ei btn-lg">Get access</a>
-                    <a href="<?= Url::to(['/portal/auth/login']) ?>" class="btn btn-outline-secondary btn-lg">Sign in</a>
+
+<!-- 1. Hero banner -->
+<section class="lp-hero">
+    <div class="container text-center">
+        <span class="lp-eyebrow"><span class="live-dot"></span>
+            <?= isset($s['last_24h']) ? Fmt::num($s['last_24h']) . ' new companies in the last 24 hours' : 'Live data, updated every few minutes' ?></span>
+        <h1 class="lp-title">Find new businesses<br class="d-none d-md-inline"> the day they register.</h1>
+        <p class="lp-lede">EntityIndex tracks newly registered LLCs, corporations and nonprofits across the US and puts them in front of your agents every day.</p>
+
+        <div class="lp-counter" aria-label="Companies in the index">
+            <div class="lp-counter-num"><?= $num('total') ?></div>
+            <div class="lp-counter-label">companies in the index<?= isset($s['computed_at']) ? ' · updated ' . Html::encode($ago($s['computed_at'])) : '' ?></div>
+        </div>
+
+        <div class="d-flex flex-wrap justify-content-center gap-2 mt-4">
+            <a href="<?= Url::to(['/portal/auth/register']) ?>" class="btn btn-ei btn-lg px-4">Get access</a>
+            <a href="#plans" class="btn btn-light btn-lg px-4 lp-btn-ghost">See plans</a>
+        </div>
+
+        <div class="lp-types">
+            <?php foreach ($typeInfo as $key => [$sub, $path]): ?>
+                <div class="lp-type">
+                    <div class="lp-type-ico"><?= $icon($path) ?></div>
+                    <div class="lp-type-name"><?= Html::encode($key === 'Foreign' ? 'Foreign entities' : ($key === 'LLC' ? 'LLCs' : $key . 's')) ?></div>
+                    <div class="lp-type-sub"><?= Html::encode($sub) ?></div>
+                    <?php if ($hasTypes): ?><div class="lp-type-n"><?= Fmt::num($types[$key]) ?> <span>in 30 days</span></div><?php endif ?>
                 </div>
-                <p class="text-muted small mt-3 mb-0">For agents and sales teams. Company records are available to signed-in members only.
-                    <a href="<?= Url::to(['/pricing/index']) ?>">See plans</a></p>
+            <?php endforeach ?>
+        </div>
+
+        <?php if (!empty($s['feed'])): ?>
+            <div class="lp-ticker" aria-label="Latest companies added">
+                <span class="lp-ticker-label"><span class="live-dot"></span> Just added</span>
+                <?php foreach (array_slice($s['feed'], 0, 5) as $f): ?>
+                    <span class="lp-ticker-item">New <?= Html::encode($f['type']) ?> · <?= Html::encode(States::name($f['state'])) ?> <em><?= Html::encode($ago($f['at'])) ?></em></span>
+                <?php endforeach ?>
             </div>
-            <div class="col-lg-5">
-                <div class="card-ei feed" aria-label="Latest companies added">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <strong>Latest additions</strong>
-                        <span class="badge-pill-ei ok"><span class="dot"></span>Live</span>
-                    </div>
-                    <?php if (!empty($s['feed'])): ?>
-                        <?php foreach ($s['feed'] as $f): ?>
-                            <div class="feed-row">
-                                <span><span class="feed-type">New <?= Html::encode($f['type']) ?></span> <span class="text-muted">· <?= Html::encode(\app\helpers\States::name($f['state'])) ?></span></span>
-                                <span class="text-muted feed-time"><?= Html::encode($ago($f['at'])) ?></span>
-                            </div>
-                        <?php endforeach ?>
-                        <p class="text-muted small mb-0 mt-2">Names, agents and officers are shown after sign-in.</p>
-                    <?php else: ?>
-                        <p class="text-muted small mb-0 mt-2">The live feed appears here once the first data refresh has run.</p>
-                    <?php endif ?>
+        <?php elseif ($stats === null): ?>
+            <p class="text-muted small mt-4 mb-0">Live numbers appear here once the first data refresh has run.</p>
+        <?php endif ?>
+    </div>
+</section>
+
+<!-- 2. What EntityIndex is -->
+<section class="lp-section">
+    <div class="container">
+        <div class="row align-items-center gy-5 gx-lg-5">
+            <div class="col-lg-6">
+                <p class="lp-kicker">What is EntityIndex</p>
+                <h2 class="lp-h2">A fresh list of new businesses, ready for your agents every morning.</h2>
+                <p class="lp-p">Thousands of companies register with a Secretary of State every day. Each one is a business that will soon need insurance, a bank, an accountant, a website and suppliers. EntityIndex collects those registrations into one place so your team can find them, qualify them and reach them first.</p>
+                <ul class="lp-list">
+                    <li><?= $check ?><div><strong>Daily new-business feed</strong><span>Every company added today, filterable by state and entity type.</span></div></li>
+                    <li><?= $check ?><div><strong>Complete company records</strong><span>Filing number, status, filing date, registered agent and officers.</span></div></li>
+                    <li><?= $check ?><div><strong>Members only</strong><span>Records are available to signed-in agents and teams, not the public.</span></div></li>
+                </ul>
+                <div class="lp-mini-stats">
+                    <div><strong><?= $num('last_7d') ?></strong><span>added in the last 7 days</span></div>
+                    <div><strong><?= $num('states_30d') ?></strong><span>states active this month</span></div>
+                    <div><strong><?= $lag === null ? '—' : ($lag === 0 ? 'Same day' : $lag . ($lag === 1 ? ' day' : ' days')) ?></strong><span>median time from filing</span></div>
                 </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="lp-mock" aria-hidden="true">
+                    <div class="lp-mock-bar"><span></span><span></span><span></span><em>entityindex.com / company</em></div>
+                    <div class="lp-mock-body">
+                        <div class="d-flex justify-content-between align-items-start gap-3">
+                            <div>
+                                <div class="lp-mock-title">Example Holdings LLC</div>
+                                <div class="text-muted small">Domestic LLC · Florida · Filing #L26000000000</div>
+                            </div>
+                            <span class="badge-pill-ei ok"><span class="dot"></span>Active</span>
+                        </div>
+                        <dl class="lp-mock-facts">
+                            <dt>Filed</dt><dd>Today</dd>
+                            <dt>Added to EntityIndex</dt><dd>Same day</dd>
+                            <dt>Registered agent</dt><dd><span class="lp-blur" style="width:150px"></span></dd>
+                            <dt>Principal address</dt><dd><span class="lp-blur" style="width:190px"></span></dd>
+                        </dl>
+                        <div class="lp-mock-sub">Officers</div>
+                        <div class="lp-mock-person"><span class="lp-avatar"></span><span class="lp-blur" style="width:120px"></span><span class="lp-blur short"></span></div>
+                        <div class="lp-mock-person"><span class="lp-avatar"></span><span class="lp-blur" style="width:96px"></span><span class="lp-blur short"></span></div>
+                        <div class="lp-mock-cta">Sign in to see the full record</div>
+                    </div>
+                </div>
+                <p class="text-muted small text-center mt-2 mb-0">Illustration of a company record. Real records are shown after sign-in.</p>
             </div>
         </div>
     </div>
 </section>
 
-<div class="container">
-    <div class="row g-3 stats" aria-label="Key numbers">
-        <div class="col-6 col-lg"><div class="stat"><div class="v"><?= $num('total') ?></div><div class="l">Companies in the database</div></div></div>
-        <div class="col-6 col-lg"><div class="stat"><div class="v"><?= $num('last_24h') ?></div><div class="l">Added in the last 24 hours</div></div></div>
-        <div class="col-6 col-lg"><div class="stat"><div class="v"><?= $num('last_7d') ?></div><div class="l">Added in the last 7 days</div></div></div>
-        <div class="col-6 col-lg"><div class="stat"><div class="v"><?= $num('states_30d') ?></div><div class="l">States with new companies, last 30 days</div></div></div>
-        <div class="col-12 col-lg"><div class="stat"><div class="v"><?= $lag === null ? '—' : ($lag === 0 ? 'Same day' : $lag . ($lag === 1 ? ' day' : ' days')) ?></div><div class="l">Median time from state filing to our list</div></div></div>
-    </div>
-    <?php if (isset($s['computed_at'])): ?>
-        <p class="text-muted small mt-2 mb-0">Live numbers, updated <?= Html::encode($ago($s['computed_at'])) ?>.</p>
-    <?php endif ?>
-
-    <?php if ($daily): ?>
-        <section class="section">
-            <div class="row g-3">
-                <div class="col-lg-8">
-                    <div class="card-ei h-100">
-                        <h2 class="h6 mb-1">New companies added per day</h2>
-                        <p class="text-muted small mb-3">Last <?= count($daily) ?> days</p>
-                        <div class="bars" role="img" aria-label="Bar chart of new companies added per day, last <?= count($daily) ?> days. Values are in the table below.">
-                            <?php foreach ($daily as $i => $d): ?>
-                                <?php $label = Fmt::dayShort($d['day']) . ': ' . Fmt::num($d['count']) . ' companies'; ?>
-                                <div class="bar-col" tabindex="0" data-tip="<?= Html::encode($label) ?>">
-                                    <div class="bar<?= $i === count($daily) - 1 ? ' today' : '' ?>" style="height: <?= round($d['count'] / $maxDay * 100, 1) ?>%"></div>
-                                </div>
-                            <?php endforeach ?>
-                        </div>
-                        <div class="bars-axis text-muted small"><span><?= Html::encode(Fmt::dayShort($daily[0]['day'])) ?></span><span>Today (so far)</span></div>
-                        <details class="mt-2 small">
-                            <summary class="text-muted">Show as table</summary>
-                            <table class="table table-sm mt-2 mb-0"><thead><tr><th>Day</th><th class="text-end">Companies added</th></tr></thead><tbody>
-                                <?php foreach (array_reverse($daily) as $d): ?><tr><td><?= Html::encode(Fmt::dayShort($d['day'])) ?></td><td class="text-end"><?= Fmt::num($d['count']) ?></td></tr><?php endforeach ?>
-                            </tbody></table>
-                        </details>
-                    </div>
-                </div>
-                <div class="col-lg-4">
-                    <div class="card-ei h-100">
-                        <h2 class="h6 mb-1">Busiest states this week</h2>
-                        <p class="text-muted small mb-3">New companies, last 7 days</p>
-                        <?php if ($top): ?>
-                            <?php foreach ($top as $t): ?>
-                                <div class="hbar">
-                                    <div class="hbar-head"><span><?= Html::encode($t['name']) ?></span><span class="fw-semibold"><?= Fmt::num($t['count']) ?></span></div>
-                                    <div class="hbar-track"><div class="hbar-fill" style="width: <?= round($t['count'] / $maxTop * 100, 1) ?>%"></div></div>
-                                </div>
-                            <?php endforeach ?>
-                        <?php else: ?>
-                            <p class="text-muted small mb-0">No new companies in the last 7 days.</p>
-                        <?php endif ?>
-                    </div>
-                </div>
-            </div>
-        </section>
-    <?php endif ?>
-
-    <section class="section">
-        <div class="section-head"><h2>How agents use EntityIndex</h2></div>
-        <div class="row g-4 steps">
-            <?php foreach ($steps as $i => [$t, $d]): ?>
+<!-- 3. How it works -->
+<section class="lp-section lp-alt">
+    <div class="container">
+        <div class="text-center mb-5">
+            <p class="lp-kicker">How it works</p>
+            <h2 class="lp-h2 mx-auto" style="max-width:640px">From state registration to your agent’s call list.</h2>
+        </div>
+        <div class="row g-4">
+            <?php foreach ($steps as $i => [$t, $d, $path]): ?>
                 <div class="col-md-4">
-                    <div class="step"><?= $i + 1 ?></div>
-                    <h3 class="h6"><?= Html::encode($t) ?></h3>
-                    <p class="text-muted mb-0"><?= Html::encode($d) ?></p>
+                    <div class="lp-step">
+                        <div class="lp-step-top"><div class="lp-step-ico"><?= $icon($path, 24) ?></div><span class="lp-step-n">0<?= $i + 1 ?></span></div>
+                        <h3><?= Html::encode($t) ?></h3>
+                        <p><?= Html::encode($d) ?></p>
+                    </div>
                 </div>
             <?php endforeach ?>
         </div>
-    </section>
+    </div>
+</section>
 
-    <section class="section">
-        <div class="section-head"><h2>What your agents get</h2><span class="ms-auto"></span><a href="<?= Url::to(['/site/features']) ?>">All features →</a></div>
-        <div class="card-ei">
-            <div class="row g-0 checklist">
-                <?php foreach ($record as [$t, $d]): ?>
-                    <div class="col-md-6 check-item">
-                        <svg class="check-ico" viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                        <div><strong><?= Html::encode($t) ?></strong><div class="text-muted small"><?= Html::encode($d) ?></div></div>
-                    </div>
-                <?php endforeach ?>
-            </div>
+<!-- 4. Plans -->
+<section class="lp-section" id="plans">
+    <div class="container">
+        <div class="text-center mb-5">
+            <p class="lp-kicker">Plans</p>
+            <h2 class="lp-h2">Pick the plan that fits your team.</h2>
+            <p class="lp-p mx-auto mb-0" style="max-width:560px">Billing is not live yet. Join the waitlist on any paid plan and we will contact you first.</p>
         </div>
-    </section>
-
-    <section class="section">
-        <div class="section-head"><h2>Plans</h2><span class="ms-auto"></span><a href="<?= Url::to(['/pricing/index']) ?>">Compare plans →</a></div>
-        <div class="row g-3">
+        <div class="row g-4 align-items-stretch">
             <?php foreach (Yii::$app->params['tiers'] as $t): ?>
-                <div class="col-md-6 col-lg-3">
-                    <div class="card-ei tier h-100<?= !empty($t['featured']) ? ' featured' : '' ?>">
-                        <h3 class="h6 m-0"><?= Html::encode($t['name']) ?></h3>
-                        <div class="price mt-2"><?= Html::encode($t['price']) ?><small><?= Html::encode($t['per']) ?></small></div>
-                        <div class="text-muted small"><?= Html::encode($t['for']) ?></div>
+                <div class="col-md-6 col-xl-3">
+                    <div class="lp-plan h-100<?= !empty($t['featured']) ? ' featured' : '' ?>">
+                        <?php if (!empty($t['featured'])): ?><span class="lp-plan-badge">Most popular</span><?php endif ?>
+                        <h3><?= Html::encode($t['name']) ?></h3>
+                        <p class="lp-plan-for"><?= Html::encode($t['for']) ?></p>
+                        <div class="lp-plan-price"><?= Html::encode($t['price']) ?><small><?= Html::encode($t['per']) ?></small></div>
+                        <ul>
+                            <?php foreach ($t['features'] as $f): ?><li><?= $check ?><span><?= Html::encode($f) ?></span></li><?php endforeach ?>
+                        </ul>
+                        <a href="<?= Url::to($t['url']) ?>" class="btn <?= !empty($t['featured']) ? 'btn-ei' : 'btn-outline-secondary' ?> w-100 mt-auto"><?= Html::encode($t['cta']) ?></a>
                     </div>
                 </div>
             <?php endforeach ?>
         </div>
-    </section>
+    </div>
+</section>
 
-    <section class="section">
-        <div class="section-head"><h2>Questions</h2><span class="ms-auto"></span><a href="<?= Url::to(['/site/faq']) ?>">All FAQs →</a></div>
-        <div class="faq">
-            <?php foreach ($faq as [$cat, $q, $a]): ?>
-                <details><summary><?= Html::encode($q) ?></summary><p class="text-muted"><?= Html::encode($a) ?></p></details>
-            <?php endforeach ?>
-        </div>
-    </section>
-
-    <section class="section">
-        <div class="card-ei cta-band d-flex flex-wrap justify-content-between align-items-center gap-3">
-            <div style="max-width:620px">
-                <h2 class="h4 mb-1">Give your agents today’s new businesses</h2>
-                <p class="text-muted mb-0">Create an account to browse the daily feed and company records. Upgrade when your team needs officers, alerts or exports.</p>
+<!-- 5. Sign-up banner -->
+<section class="pb-5">
+    <div class="container">
+        <div class="lp-banner">
+            <div>
+                <h2>Start finding new businesses today.</h2>
+                <p>Create your account in a minute and see today’s new companies.</p>
             </div>
-            <div class="d-flex gap-2">
-                <a href="<?= Url::to(['/portal/auth/register']) ?>" class="btn btn-ei">Get access</a>
-                <a href="<?= Url::to(['/site/contact', 'topic' => 'sales']) ?>" class="btn btn-outline-secondary">Talk to sales</a>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="<?= Url::to(['/portal/auth/register']) ?>" class="btn btn-light btn-lg px-4 fw-semibold">Create your account</a>
+                <a href="<?= Url::to(['/site/contact', 'topic' => 'sales']) ?>" class="btn btn-outline-light btn-lg px-4">Talk to sales</a>
             </div>
         </div>
-    </section>
-</div>
+    </div>
+</section>
