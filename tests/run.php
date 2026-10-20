@@ -255,6 +255,12 @@ $a->postForm('/portal/auth/login', ['LoginForm' => ['email' => 'admin@example.co
 $r = $a->get('/portal');
 check('admin dashboard shows admin counters', str_contains($r['body'], 'opt-out requests pending') && str_contains($r['body'], 'new contact messages') && (bool) preg_match('/\d+ on waitlist/', $r['body']));
 
+run('php yii seed/user pro@example.com Pro-pass-1 pro', $env, $root);
+$pro = new Http('http://127.0.0.1:18080');
+$r = $pro->postForm('/portal/auth/login', ['LoginForm' => ['email' => 'pro@example.com', 'password' => 'Pro-pass-1']]);
+check('seed/user: a pro test user can sign in', $r['status'] === 302, (string) $r['status']);
+check('seed/user: stored as a customer on the pro plan', $pdo->query("SELECT CONCAT(role, '/', plan) FROM user WHERE email = 'pro@example.com'")->fetchColumn() === 'customer/pro');
+
 proc_terminate($srv);
 
 echo "Configuration errors\n";
@@ -268,6 +274,8 @@ $capture = function (string $cmd, array $e) use ($root): array {
     $out = stream_get_contents($pipes[1]) . stream_get_contents($pipes[2]);
     return [proc_close($p), $out];
 };
+[$code] = $capture('php yii seed/user x@example.com Pass-123456 gold', $env);
+check('seed/user: rejects an unknown plan', $code !== 0);
 $base = ['PATH' => getenv('PATH') ?: '/usr/bin:/bin', 'ENV_FILE' => '/nonexistent/.env'] + $env; // never read the developer's real .env here
 $required = ['DB_DSN', 'DB_USER', 'COOKIE_VALIDATION_KEY', 'SITE_URL'];
 [$code, $out] = $capture('php yii env/check', array_diff_key($base, array_flip($required)) + ['DB_PASS' => 'SECRET-PASS-123']);

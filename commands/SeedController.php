@@ -15,6 +15,7 @@ use yii\helpers\Console;
  *   php yii seed/sample                    ~6,000 fake companies from data/sample/entities.json
  *   php yii seed/all                       both
  *   php yii seed/admin you@x.com 'pass'    create (or reset) an admin portal user
+ *   php yii seed/user you@x.com 'pass' pro create (or reset) a customer on a plan: free | pro | business | bulk
  */
 class SeedController extends Controller
 {
@@ -131,6 +132,23 @@ class SeedController extends Controller
         $user->setPassword($password);
         $user->save(false);
         $this->stdout("Admin user {$email} saved.\n", Console::FG_GREEN);
+        return ExitCode::OK;
+    }
+
+    /** Creates or resets a customer account on the given plan (no billing yet, so plans are set here or in the DB). */
+    public function actionUser(string $email, string $password, string $plan = 'free'): int
+    {
+        if (!in_array($plan, ['free', 'pro', 'business', 'bulk'], true)) {
+            $this->stderr("Unknown plan '$plan'. Use free, pro, business or bulk.\n", Console::FG_RED);
+            return ExitCode::USAGE;
+        }
+        $user = User::findOne(['email' => $email]) ?? new User(['email' => $email, 'name' => ucfirst($plan) . ' test user']);
+        $user->role = User::ROLE_CUSTOMER;
+        $user->plan = $plan;
+        $user->status = User::STATUS_ACTIVE;
+        $user->setPassword($password);
+        $user->save(false);
+        $this->stdout("User {$email} saved (plan: {$plan}).\n", Console::FG_GREEN);
         return ExitCode::OK;
     }
 
