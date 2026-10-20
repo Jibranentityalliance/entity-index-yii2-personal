@@ -110,15 +110,11 @@ dl.facts dt { color: var(--ei-muted); font-weight: 500; }
 .step { width: 30px; height: 30px; border-radius: 50%; background: var(--ei-accent); color: var(--ei-accent-ink); display: grid; place-items: center; font-weight: 700; margin-bottom: 10px; }
 
 /* landing page */
-.lp-hero { position: relative; padding: 72px 0 56px; overflow: hidden;
+/* Hero photo: Chicago skyline, Unsplash (free licence), self-hosted in web/img. A light overlay keeps the text readable. */
+.lp-hero { position: relative; padding: 80px 0 60px; overflow: hidden; border-bottom: 1px solid var(--ei-line);
   background:
-    radial-gradient(900px 420px at 15% -10%, rgba(31,157,115,.14), transparent 60%),
-    radial-gradient(800px 420px at 90% 0%, rgba(59,130,246,.10), transparent 60%),
-    linear-gradient(180deg, #f6fbf9 0%, var(--ei-bg) 100%);
-  border-bottom: 1px solid var(--ei-line); }
-.lp-hero::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .5;
-  background-image: linear-gradient(var(--ei-line) 1px, transparent 1px), linear-gradient(90deg, var(--ei-line) 1px, transparent 1px);
-  background-size: 48px 48px; mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 20%, transparent 75%); -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 20%, transparent 75%); }
+    linear-gradient(180deg, rgba(251,251,249,.72) 0%, rgba(246,251,249,.84) 45%, rgba(251,251,249,.97) 100%),
+    url('../img/hero-city.jpg') center 35% / cover no-repeat; }
 .lp-hero .container { position: relative; }
 .lp-eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: #fff; border: 1px solid var(--ei-line);
   font-size: 13px; font-weight: 600; color: #0b6e53; box-shadow: 0 1px 2px rgba(16,24,40,.05); }
