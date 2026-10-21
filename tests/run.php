@@ -444,10 +444,12 @@ echo "Portal companies from the mirror (mirror/backfill, mirror/apply)\n";
 $pdo->exec("INSERT INTO manual_companies (id, user_id, data, date_added) VALUES (300, 4, " . $pdo->quote(json_encode(['company' => ['state' => 'FL', 'name' => 'PHONE SAMPLE LLC',
     'document_number' => 'L26000300', 'type' => 'LLC', 'date_filed' => '10/20/2026', 'status' => '1'], 'registered_agent' => ['fname' => 'Ana', 'lname' => 'Sample',
     'full_address' => '1 Main St, Miami, FL 33101', 'phone' => '305-555-0142'], 'officers' => [['fname' => 'Bo', 'lname' => 'Owner', 'o_title' => 'MGR', 'phone' => '(786) 555-0199']], 'more_info' => []])) . ", NOW()),
-    (301, 4, " . $pdo->quote(json_encode(['company' => ['state' => 'FL', 'name' => 'PHONE SAMPLE LLC RENAMED', 'document_number' => 'L26000300', 'type' => 'LLC', 'status' => '1'], 'registered_agent' => [], 'officers' => [], 'more_info' => []])) . ", NOW())");
+    (301, 4, " . $pdo->quote(json_encode(['company' => ['state' => 'FL', 'name' => 'PHONE SAMPLE LLC RENAMED', 'document_number' => 'L26000300', 'type' => 'LLC', 'status' => '1'], 'registered_agent' => [], 'officers' => [], 'more_info' => []])) . ", NOW()),
+    (302, 4, " . $pdo->quote(json_encode(['company' => ['state' => 'OH', 'name' => 'FUTURE DATE LLC', 'document_number' => '5000302', 'type' => 'LLC', 'date_filed' => '01/06/2030', 'effective_date' => '1/6/30', 'status' => '1'], 'registered_agent' => [], 'officers' => [], 'more_info' => []])) . ", NOW())");
 $mirrorEnv = ['MIRROR_DB' => $testDb, 'MIRROR_TZ' => 'UTC'] + $einEnv;
 [$code, $out] = $capture('php yii mirror/backfill --batch=4', $mirrorEnv);
-check('mirror/backfill converts every source row', $code === 0 && str_contains($out, 'backfill done: 16 rows'), "exit $code: $out");
+check('mirror/backfill converts every source row', $code === 0 && str_contains($out, 'backfill done: 17 rows'), "exit $code: $out");
+check('mirror: a filing date in the future is unknown (N/A)', $pdo->query("SELECT COUNT(*) FROM entities WHERE url_key = '5000302' AND filed_at IS NULL AND formation_date IS NULL")->fetchColumn() == 1);
 $conv = fn(string $sql) => $pdo->query($sql)->fetchColumn();
 check('mirror: repeat submissions are one company, newest row wins', $conv("SELECT COUNT(*) FROM entities WHERE state = 'FL' AND url_key = 'l26000300'") == 1
     && $conv("SELECT name FROM entities WHERE url_key = 'l26000300'") === 'PHONE SAMPLE LLC RENAMED');

@@ -100,7 +100,12 @@ class MirrorConverter
         $key = strtolower(substr((string) preg_replace('/[^A-Za-z0-9]/', '', (string) $filing), 0, 64));
         $name = (string) ($c['name'] ?? '');
         $slug = substr(Inflector::slug($name), 0, 150);
-        $filed = $c['date_filed'] ?? null;
+        $indexed = $this->utc($row['date_added'] ?? null);
+        // A filing or effective date after the row was added is a data-entry error (e.g. 2030): unknown, shown as N/A.
+        $latest = substr($indexed, 0, 10) > gmdate('Y-m-d') ? gmdate('Y-m-d') : substr($indexed, 0, 10);
+        $notFuture = fn(?string $d) => $d !== null && $d <= date('Y-m-d', strtotime($latest . ' +1 day')) ? $d : null;
+        $filed = $notFuture($c['date_filed'] ?? null);
+        $effective = $notFuture($c['effective_date'] ?? null);
 
         $entity = [
             'source_id' => $id,
@@ -111,9 +116,9 @@ class MirrorConverter
             'name' => $name,
             'entity_type' => mb_substr((string) ($c['entity_type'] ?? ''), 0, 64),
             'status' => match ($c['is_active'] ?? null) { true => 'Active', false => 'Inactive', default => '' },
-            'formation_date' => $c['effective_date'] ?? $filed,
+            'formation_date' => $effective ?? $filed,
             'filed_at' => $filed ? $filed . ' 00:00:00' : null,
-            'indexed_at' => $this->utc($row['date_added'] ?? null),
+            'indexed_at' => $indexed,
             'source_url' => isset($c['company_url']) ? mb_substr($c['company_url'], 0, 500) : null,
         ];
         $out = [];
