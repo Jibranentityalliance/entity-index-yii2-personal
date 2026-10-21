@@ -36,8 +36,11 @@ jobs:
 
   deploy:
     # Deploys to the production server over SFTP after the tests pass on main. See docs/DEPLOY.md.
+    # Only pushes and merges by the owner account deploy; anyone else's (including re-runs) is skipped.
     needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >-
+      github.event_name == 'push' && github.ref == 'refs/heads/main' &&
+      github.actor == 'entityalliance' && github.triggering_actor == 'entityalliance'
     runs-on: ubuntu-latest
     environment: production
     concurrency:
