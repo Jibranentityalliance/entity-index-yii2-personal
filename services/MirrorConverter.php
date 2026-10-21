@@ -46,11 +46,18 @@ class MirrorConverter
             if (!$rows) {
                 break;
             }
-            $tx = $this->db->beginTransaction();
-            $this->applyRows($rows);
+            $this->retryOnDeadlock(function () use ($rows) {
+                $tx = $this->db->beginTransaction();
+                try {
+                    $this->applyRows($rows);
+                    $this->setState(self::CURSOR, (int) end($rows)['id']);
+                    $tx->commit();
+                } catch (\Throwable $e) {
+                    $tx->rollBack();
+                    throw $e;
+                }
+            });
             $cursor = (int) end($rows)['id'];
-            $this->setState(self::CURSOR, $cursor);
-            $tx->commit();
             $done += count($rows);
             if ($progress) {
                 $progress($done, $cursor);
@@ -71,15 +78,22 @@ class MirrorConverter
         $found = array_map('intval', array_column($rows, 'id'));
         $gone = array_diff($ids, $found);
 
-        $tx = $this->db->beginTransaction();
-        if ($rows) {
-            $this->applyRows($rows);
-        }
-        foreach ($gone as $id) {
-            $this->deleteSource($id);
-        }
-        $this->db->createCommand('DELETE FROM mirror_changes WHERE id <= :id', [':id' => (int) end($changes)['id']])->execute();
-        $tx->commit();
+        $this->retryOnDeadlock(function () use ($rows, $gone, $changes) {
+            $tx = $this->db->beginTransaction();
+            try {
+                if ($rows) {
+                    $this->applyRows($rows);
+                }
+                foreach ($gone as $id) {
+                    $this->deleteSource($id);
+                }
+                $this->db->createCommand('DELETE FROM mirror_changes WHERE id <= :id', [':id' => (int) end($changes)['id']])->execute();
+                $tx->commit();
+            } catch (\Throwable $e) {
+                $tx->rollBack();
+                throw $e;
+            }
+        });
         return [count($changes), count($rows), count($gone)];
     }
 
@@ -234,6 +248,24 @@ class MirrorConverter
         }
         $this->db->createCommand()->update('entities', ['source_id' => 0], ['id' => $entityId])->execute();
         $this->applyRows([$row]);
+    }
+
+    /** Runs $fn again (up to 5 times, with a short pause) when MariaDB reports a deadlock or lock wait timeout. */
+    private function retryOnDeadlock(callable $fn): void
+    {
+        for ($attempt = 1; ; $attempt++) {
+            try {
+                $fn();
+                return;
+            } catch (\yii\db\Exception $e) {
+                $code = (int) ($e->errorInfo[1] ?? 0);
+                if (!in_array($code, [1205, 1213], true) || $attempt >= 5) {
+                    throw $e;
+                }
+                \Yii::warning("mirror: deadlock/lock wait (attempt $attempt), retrying", __METHOD__);
+                usleep(200000 * $attempt);
+            }
+        }
     }
 
     public function state(string $name): int
