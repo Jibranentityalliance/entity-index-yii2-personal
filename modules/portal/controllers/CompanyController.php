@@ -12,7 +12,8 @@ class CompanyController extends PortalController
     /** /portal/company/{state}/{slug}-{urlkey}; the key (last segment) identifies the record, the slug is cosmetic. */
     public function actionView(string $state, string $slug)
     {
-        $st = States::resolve($state);
+        // 'na': companies converted from source rows without a valid state.
+        $st = strtolower($state) === 'na' ? ['code' => 'NA', 'name' => 'N/A', 'slug' => 'na'] : States::resolve($state);
         $e = $st ? EntityRepository::find($st['code'], Fmt::urlKeyFromSlug($slug)) : null;
         if (!$e) {
             throw new NotFoundHttpException('Company not found.');

@@ -212,17 +212,18 @@ check('/portal/new/florida redirects to /portal/new/fl (308)', ($r2 = $p->get('/
 check('unknown state is 404', $p->get('/portal/new/zz')['status'] === 404);
 check('coverage table lists Wyoming', str_contains($p->get('/portal/states')['body'], 'Wyoming'));
 $r = $p->get('/portal/company/ny/redline-creative-llc-7045435');
-check('company page renders for a logged-in user', $r['status'] === 200 && str_contains($r['body'], 'Company details') && str_contains($r['body'], 'Statewide Filing Agents LLC'));
+check('company page renders for a logged-in user', $r['status'] === 200 && str_contains($r['body'], 'Company details'));
+check('free plan: registered agent is locked', !str_contains($r['body'], 'Statewide Filing Agents LLC') && str_contains($r['body'], 'Registered agent details are a Pro feature'));
 $q = $pdo->prepare("SELECT p.name FROM people p JOIN entities e ON e.id = p.entity_id WHERE e.url_key = '7045435' AND p.role <> 'agent' ORDER BY p.id LIMIT 1");
 $q->execute();
 $officer = (string) $q->fetchColumn();
-check('free plan: officers are locked', $officer !== '' && !str_contains($r['body'], $officer) && str_contains($r['body'], 'Unlock with Pro'));
+check('free plan: officers are locked', $officer !== '' && !str_contains($r['body'], $officer) && str_contains($r['body'], 'Upgrade to Pro'));
 $r = $p->get('/portal/company/new-york/old-name-7045435');
 check('old slug / full state name redirects (308)', $r['status'] === 308 && str_ends_with((string) $r['location'], '/portal/company/ny/redline-creative-llc-7045435'), $r['status'] . ' ' . $r['location']);
 check('unknown company is 404', $p->get('/portal/company/ny/nothing-0000000')['status'] === 404);
 $pdo->exec("UPDATE `user` SET plan = 'pro' WHERE email = 'user@example.com'");
 $r = $p->get('/portal/company/ny/redline-creative-llc-7045435');
-check('pro plan: officers and addresses are visible', str_contains($r['body'], $officer) && !str_contains($r['body'], 'Unlock with Pro'));
+check('pro plan: officers, agent and addresses are visible', str_contains($r['body'], $officer) && str_contains($r['body'], 'Statewide Filing Agents LLC') && !str_contains($r['body'], 'Upgrade to Pro'));
 $pdo->exec("UPDATE `user` SET plan = 'free' WHERE email = 'user@example.com'");
 
 $r = (new Http('http://127.0.0.1:18080'))->postForm('/portal/auth/register', ['RegisterForm' => ['name' => 'Dup', 'email' => 'USER@example.com', 'password' => 'password1', 'password_repeat' => 'password1']]);
@@ -439,6 +440,38 @@ check('home feed shows no company names', !str_contains($home, 'ROW 210 LLC') &&
 check('stats: entity kinds', app\services\MirrorStats::entityKind('Foreign Limited Liab') === 'Foreign LLC' && app\services\MirrorStats::entityKind('S-Corp') === 'Corporation'
     && app\services\MirrorStats::entityKind('Limited Partnership') === 'Partnership' && app\services\MirrorStats::entityKind('') === 'Business');
 proc_terminate($srvS);
+echo "Portal companies from the mirror (mirror/backfill, mirror/apply)\n";
+$pdo->exec("INSERT INTO manual_companies (id, user_id, data, date_added) VALUES (300, 4, " . $pdo->quote(json_encode(['company' => ['state' => 'FL', 'name' => 'PHONE SAMPLE LLC',
+    'document_number' => 'L26000300', 'type' => 'LLC', 'date_filed' => '10/20/2026', 'status' => '1'], 'registered_agent' => ['fname' => 'Ana', 'lname' => 'Sample',
+    'full_address' => '1 Main St, Miami, FL 33101', 'phone' => '305-555-0142'], 'officers' => [['fname' => 'Bo', 'lname' => 'Owner', 'o_title' => 'MGR', 'phone' => '(786) 555-0199']], 'more_info' => []])) . ", NOW()),
+    (301, 4, " . $pdo->quote(json_encode(['company' => ['state' => 'FL', 'name' => 'PHONE SAMPLE LLC RENAMED', 'document_number' => 'L26000300', 'type' => 'LLC', 'status' => '1'], 'registered_agent' => [], 'officers' => [], 'more_info' => []])) . ", NOW())");
+$mirrorEnv = ['MIRROR_DB' => $testDb, 'MIRROR_TZ' => 'UTC'] + $einEnv;
+[$code, $out] = $capture('php yii mirror/backfill --batch=4', $mirrorEnv);
+check('mirror/backfill converts every source row', $code === 0 && str_contains($out, 'backfill done: 16 rows'), "exit $code: $out");
+$conv = fn(string $sql) => $pdo->query($sql)->fetchColumn();
+check('mirror: repeat submissions are one company, newest row wins', $conv("SELECT COUNT(*) FROM entities WHERE state = 'FL' AND url_key = 'l26000300'") == 1
+    && $conv("SELECT name FROM entities WHERE url_key = 'l26000300'") === 'PHONE SAMPLE LLC RENAMED');
+check('mirror: malformed rows are kept with missing values empty', $conv("SELECT COUNT(*) FROM entities WHERE source_id = 209 AND state = 'NA' AND url_key = 'r209' AND name = ''") == 1);
+check('mirror: rerunning backfill does nothing new', str_contains($capture('php yii mirror/backfill', $mirrorEnv)[1], 'backfill done: 0 rows'));
+$pdo->exec("DELETE FROM manual_companies WHERE id = 301");
+$pdo->exec("INSERT INTO mirror_changes (source_id) VALUES (301), (209)");
+$pdo->exec("DELETE FROM manual_companies WHERE id = 209");
+[$code, $out] = $capture('php yii mirror/apply', $mirrorEnv);
+check('mirror/apply replays a delete: the company falls back to the older submission', $code === 0 && str_contains($out, 'applied 2 changes')
+    && $conv("SELECT name FROM entities WHERE url_key = 'l26000300'") === 'PHONE SAMPLE LLC'
+    && $conv("SELECT COUNT(*) FROM people p JOIN entities e ON e.id = p.entity_id WHERE e.url_key = 'l26000300'") == 2, $out);
+check('mirror/apply: a company with no rows left is removed', $conv("SELECT COUNT(*) FROM entities WHERE url_key = 'r209'") == 0 && $conv('SELECT COUNT(*) FROM mirror_changes') == 0);
+$srvM = startServer(18087, $env, $root);
+$m = new Http('http://127.0.0.1:18087');
+$m->postForm('/portal/auth/login', ['LoginForm' => ['email' => 'pro@example.com', 'password' => 'Pro-pass-1']]);
+$page = $m->get('/portal/company/fl/phone-sample-llc-l26000300')['body'];
+check('pro: phones are masked with a reveal button', str_contains($page, '(305) •••-••42') && str_contains($page, 'data-phone="(305) 555-0142"') && str_contains($page, 'Ana Sample'));
+check('pro: missing values show N/A', str_contains($page, 'N/A'));
+$pdo->exec("UPDATE `user` SET plan = 'free' WHERE email = 'pro@example.com'");
+$page = $m->get('/portal/company/fl/phone-sample-llc-l26000300')['body'];
+check('free: no phone numbers or agent in the page at all', !str_contains($page, '555-0142') && !str_contains($page, '••42') && !str_contains($page, 'Ana Sample') && str_contains($page, 'Upgrade to Pro'));
+$pdo->exec("UPDATE `user` SET plan = 'pro' WHERE email = 'pro@example.com'");
+proc_terminate($srvM);
 $pdo->exec('DROP TABLE manual_companies');
 
 echo "\n" . ($checks - $failures) . "/$checks checks passed" . ($failures ? ", $failures FAILED" : '') . ".\n";

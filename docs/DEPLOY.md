@@ -156,6 +156,29 @@ Then add it to the web user's crontab (`sudo crontab -u www-data -e`), every 5 m
 - An exact `COUNT(*)` runs at most once a day; in between the total adds rows with a higher id.
 - Until the first run the home page shows dashes and a note instead of numbers.
 
+## 7c. Portal companies from the replicated portal data (backfill once, then cron)
+
+`php yii mirror/backfill` converts the replicated `manual_companies` rows into the portal's `entities` / `people` tables;
+`php yii mirror/apply` keeps them current from changes that triggers on the replica record in `mirror_changes`.
+Repeat submissions of the same state + filing number are one company (newest row wins). Malformed rows are kept and the
+pages show "N/A" for missing values. Phones are stored and shown to paid plans only, masked until clicked.
+
+```bash
+sudo -u www-data php yii migrate --interactive=0           # m261021_000001_mirror_entities
+sudo mariadb < docs/mirror-triggers.sql                     # record replica changes (run as root)
+echo "slave_run_triggers_for_rbr = YES" | sudo tee -a /etc/mysql/mariadb.conf.d/60-entityindex-replica.cnf
+nohup sudo -u www-data php yii mirror/backfill > runtime/logs/backfill.log 2>&1 &   # ~30-60 min for 5.8M rows; resumable
+```
+
+Then in the web user's crontab (`sudo crontab -u www-data -e`):
+
+```cron
+* * * * * cd /var/www/entityindex && php yii mirror/apply >> runtime/logs/mirror.log 2>&1
+```
+
+`php yii mirror/status` shows the backfill cursor, the queued changes and the company count. Create the triggers before the
+backfill so changes made while it runs are queued and applied afterwards.
+
 ## 8. Launch checklist
 
 1. `SITE_MODE=coming_soon` until the real data pipeline is loading; check `/coming-soon`, `/opt-out`, `/legal/terms`.

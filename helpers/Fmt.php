@@ -27,6 +27,30 @@ class Fmt
         return self::utc($day)->format('M j');
     }
 
+    /** Value for display, or "N/A" when missing (portal records converted from incomplete source rows). */
+    public static function na(?string $v): string
+    {
+        return $v === null || trim($v) === '' ? 'N/A' : $v;
+    }
+
+    /** A phone number formatted for display, e.g. "(305) 555-0142"; other lengths are returned as given. */
+    public static function phone(string $v): string
+    {
+        $d = preg_replace('/\D/', '', $v);
+        if (strlen($d) === 11 && $d[0] === '1') {
+            $d = substr($d, 1);
+        }
+        return strlen($d) === 10 ? sprintf('(%s) %s-%s', substr($d, 0, 3), substr($d, 3, 3), substr($d, 6)) : $v;
+    }
+
+    /** The phone with all but the area code and last two digits hidden, e.g. "(305) •••-••42". */
+    public static function phoneMasked(string $v): string
+    {
+        $f = self::phone($v);
+        $d = preg_replace('/\D/', '', $f);
+        return strlen($d) === 10 ? sprintf('(%s) •••-••%s', substr($d, 0, 3), substr($d, 8)) : str_repeat('•', max(4, strlen($d) - 2)) . substr($d, -2);
+    }
+
     public static function dateTime(?string $v): string
     {
         return $v ? self::utc($v)->setTimezone(new DateTimeZone('America/New_York'))->format('M j, Y, g:i A T') : '—';
