@@ -101,9 +101,10 @@ class MirrorConverter
         $name = (string) ($c['name'] ?? '');
         $slug = substr(Inflector::slug($name), 0, 150);
         $indexed = $this->utc($row['date_added'] ?? null);
-        // A filing or effective date after the row was added is a data-entry error (e.g. 2030): unknown, shown as N/A.
-        $latest = substr($indexed, 0, 10) > gmdate('Y-m-d') ? gmdate('Y-m-d') : substr($indexed, 0, 10);
-        $notFuture = fn(?string $d) => $d !== null && $d <= date('Y-m-d', strtotime($latest . ' +1 day')) ? $d : null;
+        // A filing or effective date more than a day ahead of today is a data-entry error (e.g. 2030): unknown, shown as N/A.
+        // (A date after the row was added is normal: the portal can record a company before the state's filing date.)
+        $tomorrow = gmdate('Y-m-d', time() + 86400);
+        $notFuture = fn(?string $d) => $d !== null && $d <= $tomorrow ? $d : null;
         $filed = $notFuture($c['date_filed'] ?? null);
         $effective = $notFuture($c['effective_date'] ?? null);
 
