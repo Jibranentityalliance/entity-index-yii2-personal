@@ -200,6 +200,15 @@ $side = substr($r['body'], strpos($r['body'], '<aside'), strpos($r['body'], '</a
 check('sidebar lists the five product links and nothing else', substr_count($side, 'class="nav-link') === 5 && str_contains($side, '/portal/search') && str_contains($side, '/portal/new') && str_contains($side, '/portal/states') && str_contains($side, '/portal/account') && !str_contains($side, '/pricing') && !str_contains($side, '/faq'));
 check('top bar has only the toggle and sign out', str_contains($r['body'], 'data-widget="pushmenu"') && str_contains($r['body'], 'Sign out') && !str_contains($r['body'], '>Website<'));
 check('portal loads the dark theme stylesheet', str_contains($r['body'], 'css/portal.css'));
+check('top bar has the light/dark toggle, dark by default', str_contains($r['body'], 'data-ei-theme-toggle') && str_contains($r['body'], 'Switch to light mode') && !str_contains($r['body'], 'ei-light'));
+// The toggle's cookie goes into the jar: a second Cookie header next to the session's would be ignored by PHP.
+file_put_contents($p->jar, "127.0.0.1\tFALSE\t/\tFALSE\t0\tei_theme\tlight\n", FILE_APPEND);
+$lr = $p->get('/portal');
+file_put_contents($p->jar, preg_replace('/^.*\tei_theme\t.*\n/m', '', file_get_contents($p->jar)));
+check('ei_theme=light renders the light theme', $lr['status'] === 200 && str_contains($lr['body'], 'ei-light') && str_contains($lr['body'], 'sidebar-light-primary') && !str_contains($lr['body'], 'dark-mode') && str_contains($lr['body'], 'Switch to dark mode'), (string) $lr['status']);
+$lr = (new Http('http://127.0.0.1:18080'))->req('GET', '/portal/auth/login', [], ['Cookie: ei_theme=light']);
+check('sign-in page follows the theme cookie', str_contains($lr['body'], 'ei-light') && str_contains($lr['body'], 'data-ei-theme-toggle'));
+check('unknown theme cookie falls back to dark', str_contains((new Http('http://127.0.0.1:18080'))->req('GET', '/portal/auth/login', [], ['Cookie: ei_theme=<x>'])['body'], 'dark-mode'));
 check('dashboard shows newest filings and the state grid', str_contains($r['body'], 'Newest filings') && str_contains($r['body'], 'href="/portal/new/fl"'));
 $r = $p->get('/portal/search?q=7045435');
 check('filing number search finds Redline Creative LLC', str_contains($r['body'], 'Redline Creative LLC') && str_contains($r['body'], '1 company'));

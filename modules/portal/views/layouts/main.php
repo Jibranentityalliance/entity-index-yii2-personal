@@ -4,6 +4,7 @@
 /** @var string $content */
 
 use app\modules\portal\assets\PortalAsset;
+use app\modules\portal\Module;
 use yii\helpers\Html;
 use yii\helpers\Url;
 
@@ -14,6 +15,7 @@ $this->registerMetaTag(['name' => 'viewport', 'content' => 'width=device-width, 
 $this->registerMetaTag(['name' => 'robots', 'content' => 'noindex,nofollow']);
 $this->registerLinkTag(['rel' => 'icon', 'type' => 'image/svg+xml', 'href' => Yii::getAlias('@web/favicon.svg')]);
 
+$light = Module::theme() === 'light';
 $route = Yii::$app->controller->route;
 $nav = [
     ['Dashboard', 'fa-tachometer-alt', ['/portal/default/index'], 'portal/default'],
@@ -30,14 +32,15 @@ $nav = [
     <title><?= Html::encode(($this->title ? $this->title . ' | ' : '') . 'EntityIndex Portal') ?></title>
     <?php $this->head() ?>
 </head>
-<body class="hold-transition dark-mode sidebar-mini layout-fixed">
+<body class="hold-transition ei-portal <?= $light ? 'ei-light' : 'dark-mode' ?> sidebar-mini layout-fixed">
 <?php $this->beginBody() ?>
 <div class="wrapper">
-    <nav class="main-header navbar navbar-expand navbar-dark">
+    <nav class="main-header navbar navbar-expand <?= $light ? 'navbar-light' : 'navbar-dark' ?>">
         <ul class="navbar-nav">
             <li class="nav-item"><a class="nav-link" data-widget="pushmenu" href="#" role="button" aria-label="Toggle menu"><i class="fas fa-bars"></i></a></li>
         </ul>
-        <ul class="navbar-nav ml-auto">
+        <ul class="navbar-nav ml-auto align-items-center">
+            <li class="nav-item mr-2"><?= $this->render('_theme-toggle', ['light' => $light]) ?></li>
             <li class="nav-item">
                 <?= Html::beginForm(['/portal/auth/logout'], 'post', ['class' => 'form-inline']) ?>
                 <button type="submit" class="btn btn-link nav-link ei-signout"><i class="fas fa-sign-out-alt mr-1"></i> Sign out</button>
@@ -46,7 +49,7 @@ $nav = [
         </ul>
     </nav>
 
-    <aside class="main-sidebar sidebar-dark-primary">
+    <aside class="main-sidebar <?= $light ? 'sidebar-light-primary' : 'sidebar-dark-primary' ?>">
         <a href="<?= Url::to(['/portal/default/index']) ?>" class="brand-link"><?= $this->render('_logo') ?><span class="brand-text">EntityIndex</span></a>
         <div class="sidebar">
             <nav class="mt-3">
