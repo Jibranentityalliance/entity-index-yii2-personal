@@ -29,8 +29,8 @@ $phone = function (?string $v): string {
     return '<span class="ei-phone">' . Html::encode(Fmt::phoneMasked($v)) . '</span> '
         . '<button type="button" class="btn btn-link btn-sm p-0 ml-1 js-reveal" data-phone="' . Html::encode(Fmt::phone($v)) . '">Show</button>';
 };
-$this->registerCss('.ei-blur{display:inline-block;height:11px;border-radius:6px;background:#dee2e6;filter:blur(1.5px);vertical-align:middle}'
-    . '.ei-locked span{display:block;height:12px;border-radius:6px;background:#dee2e6;filter:blur(1.5px);margin-bottom:10px}.ei-phone{font-variant-numeric:tabular-nums}');
+$this->registerCss('.ei-blur{display:inline-block;height:11px;border-radius:6px;background:#393939;filter:blur(1.5px);vertical-align:middle}'
+    . '.ei-locked span{display:block;height:12px;border-radius:6px;background:#393939;filter:blur(1.5px);margin-bottom:10px}.ei-phone{font-variant-numeric:tabular-nums}');
 $this->registerJs(<<<'JS'
 document.addEventListener('click', function (ev) {
     var b = ev.target.closest('.js-reveal');
@@ -156,7 +156,7 @@ JS);
 
     <div class="col-lg-4">
         <?php if (!$full): ?>
-            <div class="card card-outline card-primary">
+            <div class="card">
                 <div class="card-body">
                     <h3 class="h6">Get the full record</h3>
                     <p class="text-muted small">Pro shows the registered agent, officers, addresses and phone numbers for every company.</p>

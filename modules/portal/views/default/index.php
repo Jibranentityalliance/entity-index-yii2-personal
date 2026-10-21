@@ -19,14 +19,14 @@ $latestCount = $latest['total'] ?? 0;
 ?>
 <div class="row">
     <?php foreach ([
-        ['info', 'fa-building', 'Latest day', Fmt::num($latestCount), ['/portal/new/index']],
-        ['success', 'fa-calendar-week', 'Last 7 days', Fmt::num($week), ['/portal/states/index']],
-        ['warning', 'fa-database', 'Indexed', Fmt::num($total), ['/portal/search/index']],
-        ['secondary', 'fa-tag', 'Your plan', ucfirst($user->plan), ['/pricing/index']],
-    ] as [$color, $icon, $label, $value, $route]): ?>
+        ['fa-building', 'Latest day', Fmt::num($latestCount), ['/portal/new/index']],
+        ['fa-calendar-week', 'Last 7 days', Fmt::num($week), ['/portal/states/index']],
+        ['fa-database', 'Indexed', Fmt::num($total), ['/portal/search/index']],
+        ['fa-tag', 'Your plan', ucfirst($user->plan), ['/pricing/index']],
+    ] as [$icon, $label, $value, $route]): ?>
         <div class="col-sm-6 col-lg-3">
             <div class="info-box">
-                <span class="info-box-icon bg-<?= $color ?>"><i class="fas <?= $icon ?>"></i></span>
+                <span class="info-box-icon"><i class="fas <?= $icon ?>"></i></span>
                 <div class="info-box-content">
                     <span class="info-box-text"><a href="<?= Url::to($route) ?>" class="text-reset stretched-link"><?= Html::encode($label) ?></a></span>
                     <span class="info-box-number"><?= Html::encode($value) ?></span>
@@ -45,7 +45,7 @@ $latestCount = $latest['total'] ?? 0;
     </div>
 <?php endif ?>
 
-<div class="card card-primary card-outline">
+<div class="card">
     <div class="card-body">
         <form action="<?= Url::to(['/portal/search/index']) ?>" role="search">
             <div class="form-row">
@@ -71,10 +71,10 @@ $latestCount = $latest['total'] ?? 0;
 <div class="card">
     <div class="card-header"><h3 class="card-title">New businesses by state (latest filing day)</h3><div class="card-tools"><a href="<?= Url::to(['/portal/states/index']) ?>">Coverage &amp; freshness →</a></div></div>
     <div class="card-body">
-        <div class="row">
+        <div class="row ei-state-grid">
             <?php foreach (States::all() as $s): $n = $stats[$s['code']]['latestDayCount'] ?? 0; ?>
                 <div class="col-6 col-md-4 col-lg-3 mb-2">
-                    <a href="<?= Fmt::stateUrl($s['code']) ?>" class="btn btn-default btn-block d-flex justify-content-between"><span><?= Html::encode($s['name']) ?></span><span class="<?= $n ? 'font-weight-bold' : 'text-muted' ?>"><?= $n ? Fmt::num($n) : '–' ?></span></a>
+                    <a href="<?= Fmt::stateUrl($s['code']) ?>" class="btn btn-default btn-block"><span><?= Html::encode($s['name']) ?></span><span class="<?= $n ? 'font-weight-bold' : 'text-muted' ?>"><?= $n ? Fmt::num($n) : '–' ?></span></a>
                 </div>
             <?php endforeach ?>
         </div>

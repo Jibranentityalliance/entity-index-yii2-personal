@@ -26,7 +26,7 @@ $href = function (string $d, int $p = 1) use ($basePath, $routeParams, $days): s
 };
 ?>
 <div class="mb-3">
-    <span class="text-muted small mr-2">Filing day:</span>
+    <span class="ei-eyebrow">Filing day</span>
     <?php foreach ($days as $d): ?>
         <a href="<?= $href($d) ?>" class="btn btn-sm mr-1 mb-1 <?= $d === $day ? 'btn-primary' : 'btn-outline-secondary' ?>"><?= Fmt::dayShort($d) ?></a>
     <?php endforeach ?>

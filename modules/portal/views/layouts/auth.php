@@ -21,10 +21,10 @@ $this->registerLinkTag(['rel' => 'icon', 'type' => 'image/svg+xml', 'href' => Yi
     <title><?= Html::encode(($this->title ? $this->title . ' | ' : '') . 'EntityIndex Portal') ?></title>
     <?php $this->head() ?>
 </head>
-<body class="hold-transition login-page">
+<body class="hold-transition dark-mode login-page">
 <?php $this->beginBody() ?>
 <div class="login-box">
-    <div class="login-logo"><a href="<?= Url::to(['/site/index']) ?>"><b>Entity</b>Index</a></div>
+    <div class="login-logo"><a href="<?= Url::to(['/site/index']) ?>"><?= $this->render('_logo', ['size' => 32]) ?>EntityIndex</a></div>
     <div class="card">
         <div class="card-body login-card-body">
             <?php foreach (Yii::$app->session->getAllFlashes() as $type => $msg): ?>

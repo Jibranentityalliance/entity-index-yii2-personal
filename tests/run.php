@@ -194,12 +194,12 @@ foreach (['/portal', '/portal/search', '/portal/new', '/portal/new/fl', '/portal
     check("portal $path renders AdminLTE", $r['status'] === 200 && str_contains($r['body'], 'main-sidebar') && $hasMeta($r['body']) && $hasHeader($r), (string) $r['status']);
 }
 $r = $p->get('/portal');
-check('dashboard stat cards are white AdminLTE info-boxes', substr_count($r['body'], 'class="info-box"') === 4 && !str_contains($r['body'], 'small-box'));
-check('sidebar is the light variant, with no user panel, plan text or help section', str_contains($r['body'], 'sidebar-light-primary') && !str_contains($r['body'], 'sidebar-dark') && !str_contains($r['body'], 'user-panel') && !str_contains($r['body'], 'nav-header') && !str_contains($r['body'], 'Help &amp; contact'));
+check('dashboard stat cards are AdminLTE info-boxes', substr_count($r['body'], 'class="info-box"') === 4 && !str_contains($r['body'], 'small-box'));
+check('portal is dark: dark-mode body and dark sidebar, with no user panel, plan text or help section', str_contains($r['body'], 'dark-mode') && str_contains($r['body'], 'sidebar-dark-primary') && !str_contains($r['body'], 'sidebar-light') && !str_contains($r['body'], 'user-panel') && !str_contains($r['body'], 'nav-header') && !str_contains($r['body'], 'Help &amp; contact'));
 $side = substr($r['body'], strpos($r['body'], '<aside'), strpos($r['body'], '</aside>') - strpos($r['body'], '<aside'));
 check('sidebar lists the five product links and nothing else', substr_count($side, 'class="nav-link') === 5 && str_contains($side, '/portal/search') && str_contains($side, '/portal/new') && str_contains($side, '/portal/states') && str_contains($side, '/portal/account') && !str_contains($side, '/pricing') && !str_contains($side, '/faq'));
 check('top bar has only the toggle and sign out', str_contains($r['body'], 'data-widget="pushmenu"') && str_contains($r['body'], 'Sign out') && !str_contains($r['body'], '>Website<'));
-check('portal loads no custom portal stylesheet', !str_contains($r['body'], 'portal.css'));
+check('portal loads the dark theme stylesheet', str_contains($r['body'], 'css/portal.css'));
 check('dashboard shows newest filings and the state grid', str_contains($r['body'], 'Newest filings') && str_contains($r['body'], 'href="/portal/new/fl"'));
 $r = $p->get('/portal/search?q=7045435');
 check('filing number search finds Redline Creative LLC', str_contains($r['body'], 'Redline Creative LLC') && str_contains($r['body'], '1 company'));
