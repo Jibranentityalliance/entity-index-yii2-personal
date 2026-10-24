@@ -126,7 +126,7 @@ echo "Product pages are not public\n";
 foreach (['/search', '/search?q=roofing', '/company/ny/redline-creative-llc-7045435', '/new', '/new/fl', '/states'] as $path) {
     check("old public URL $path is gone (404)", $h->get($path)['status'] === 404);
 }
-foreach (['/portal', '/portal/search', '/portal/search?q=roofing', '/portal/company/ny/redline-creative-llc-7045435', '/portal/new', '/portal/new/fl', '/portal/states', '/portal/account'] as $path) {
+foreach (['/portal', '/portal/companies', '/portal/companies?q=roofing', '/portal/company/ny/redline-creative-llc-7045435', '/portal/states', '/portal/account'] as $path) {
     $r = $h->get($path);
     check("anonymous $path redirects to login", $r['status'] === 302 && str_contains((string) $r['location'], '/portal/auth/login'), $r['status'] . ' ' . $r['location']);
 }
@@ -189,7 +189,7 @@ check('register succeeds and redirects to the dashboard', $r['status'] === 302 &
 $r = $p->get('/portal');
 check('dashboard shows for the new user', $r['status'] === 200 && str_contains($r['body'], 'Total companies') && !str_contains($r['body'], 'Your plan'));
 echo "Portal product pages (free plan)\n";
-foreach (['/portal', '/portal/search', '/portal/new', '/portal/new/fl', '/portal/states', '/portal/account'] as $path) {
+foreach (['/portal', '/portal/companies', '/portal/companies?state=FL', '/portal/states', '/portal/account'] as $path) {
     $r = $p->get($path);
     check("portal $path renders AdminLTE", $r['status'] === 200 && str_contains($r['body'], 'main-sidebar') && $hasMeta($r['body']) && $hasHeader($r), (string) $r['status']);
 }
@@ -197,7 +197,7 @@ $r = $p->get('/portal');
 check('dashboard stat cards are AdminLTE info-boxes', preg_match_all('/class="info-box[ "]/', $r['body']) === 4 && !str_contains($r['body'], 'small-box'));
 check('portal is dark: dark-mode body and dark sidebar, with no user panel, plan text or help section', str_contains($r['body'], 'dark-mode') && str_contains($r['body'], 'sidebar-dark-primary') && !str_contains($r['body'], 'sidebar-light') && !str_contains($r['body'], 'user-panel') && !str_contains($r['body'], 'nav-header') && !str_contains($r['body'], 'Help &amp; contact'));
 $side = substr($r['body'], strpos($r['body'], '<aside'), strpos($r['body'], '</aside>') - strpos($r['body'], '<aside'));
-check('sidebar lists the five product links and nothing else', substr_count($side, 'class="nav-link') === 5 && str_contains($side, '/portal/search') && str_contains($side, '/portal/new') && str_contains($side, '/portal/states') && str_contains($side, '/portal/account') && !str_contains($side, '/pricing') && !str_contains($side, '/faq'));
+check('sidebar lists the four product links and nothing else', substr_count($side, 'class="nav-link') === 4 && str_contains($side, '>Companies<') && str_contains($side, '/portal/companies') && !str_contains($side, '/portal/new') && !str_contains($side, '/portal/search') && str_contains($side, '/portal/states') && str_contains($side, '/portal/account') && !str_contains($side, '/pricing') && !str_contains($side, '/faq'));
 $top = substr($r['body'], strpos($r['body'], '<nav'), strpos($r['body'], '</nav>') - strpos($r['body'], '<nav'));
 check('top bar has only the toggle and sign out', str_contains($top, 'data-widget="pushmenu"') && str_contains($top, 'Sign out') && !str_contains($top, '>Website<'));
 check('portal loads the dark theme stylesheet', str_contains($r['body'], 'css/portal.css'));
@@ -212,15 +212,20 @@ check('sign-in page follows the theme cookie', str_contains($lr['body'], 'ei-lig
 check('unknown theme cookie falls back to dark', str_contains((new Http('http://127.0.0.1:18080'))->req('GET', '/portal/auth/login', [], ['Cookie: ei_theme=<x>'])['body'], 'dark-mode'));
 check('dashboard shows the 7-day overview and the top 10 states, and nothing else', str_contains($r['body'], 'Structured addresses') && str_contains($r['body'], 'ei-info-box-placeholder')
     && str_contains($r['body'], 'Top 10 states') && substr_count($r['body'], '<tr>') <= 11 && !str_contains($r['body'], 'Newest filings') && !str_contains($r['body'], 'ei-state-grid'));
-$r = $p->get('/portal/search?q=7045435');
+$r = $p->get('/portal/companies?q=7045435');
 check('filing number search finds Redline Creative LLC', str_contains($r['body'], 'Redline Creative LLC') && str_contains($r['body'], '1 company'));
 check('search result links to the portal company page', str_contains($r['body'], 'href="/portal/company/ny/redline-creative-llc-7045435"'));
-check('search shows 6,000 companies without filters', str_contains($p->get('/portal/search')['body'], '6,000 companies'));
-check('stopword-only and short queries do not error', $p->get('/portal/search?q=the')['status'] === 200 && $p->get('/portal/search?q=ab')['status'] === 200);
-check('bad date filters are ignored, not an error', $p->get('/portal/search?from=nope&to=2026-13-45')['status'] === 200);
-check('new filings by state renders', str_contains($p->get('/portal/new/fl')['body'], 'New Florida businesses'));
-check('/portal/new/florida redirects to /portal/new/fl (308)', ($r2 = $p->get('/portal/new/florida'))['status'] === 308 && str_ends_with((string) $r2['location'], '/portal/new/fl'), $r2['status'] . ' ' . $r2['location']);
-check('unknown state is 404', $p->get('/portal/new/zz')['status'] === 404);
+$r = $p->get('/portal/companies');
+$rows = preg_match_all('/href="\/portal\/company\/[^"]+"/', $r['body'], $m) ? array_values(array_unique($m[0])) : [];
+check('companies shows all 6,000 without filters, 50 per page', str_contains($r['body'], '6,000 companies') && count($rows) === 50 && str_contains($r['body'], '1–50 of 6,000'), (string) count($rows));
+check('companies has the date range picker in the filter row', str_contains($r['body'], 'data-ei-daterange') && str_contains($r['body'], 'flatpickr') && str_contains($r['body'], 'name="from"') && str_contains($r['body'], 'name="to"'));
+check('companies page 2 continues the list', str_contains($p->get('/portal/companies?page=2')['body'], '51–100 of 6,000'));
+check('stopword-only and short queries do not error', $p->get('/portal/companies?q=the')['status'] === 200 && $p->get('/portal/companies?q=ab')['status'] === 200);
+check('bad date filters are ignored, not an error', $p->get('/portal/companies?from=nope&to=2026-13-45')['status'] === 200);
+$r = $p->get('/portal/companies?state=FL');
+check('state filter narrows to that state', str_contains($r['body'], ' in Florida') && !str_contains($r['body'], '6,000 companies'));
+check('new filings and search pages are gone', $p->get('/portal/new')['status'] === 404 && $p->get('/portal/new/fl')['status'] === 404 && $p->get('/portal/search')['status'] === 404);
+check('state links go to companies filtered by state', str_contains($p->get('/portal/states')['body'], 'href="/portal/companies?state=FL"'));
 check('coverage table lists Wyoming', str_contains($p->get('/portal/states')['body'], 'Wyoming'));
 $r = $p->get('/portal/company/ny/redline-creative-llc-7045435');
 check('company page renders for a logged-in user', $r['status'] === 200 && str_contains($r['body'], 'Company details'));

@@ -34,10 +34,9 @@ Forms (AJAX, CSRF-protected, honeypot): `POST /api/waitlist`, `POST /api/opt-out
 
 | Route | Page |
 |---|---|
-| `/portal` | dashboard: stats, quick search, newest filings, jurisdictions grid (admins also see waitlist / opt-out / contact counters) |
-| `/portal/search` | search with filters |
+| `/portal` | dashboard: last-7-days cards (companies, states, structured addresses) and the top 10 states |
+| `/portal/companies` | every company, newest first, 50 per page; keyword, state, type and filing-date-range filters (`?state=FL` is the per-state list) |
 | `/portal/company/{state}/{slug}-{filing-key}` | company record (officers and addresses are visible on paid plans and to admins, locked on Free) |
-| `/portal/new`, `/portal/new/{state}` | new filings by day / by state |
 | `/portal/states` | coverage and freshness per jurisdiction |
 | `/portal/account` | profile and password |
 | `/portal/auth/login`, `/portal/auth/register`, `/portal/auth/logout` (POST) | authentication |

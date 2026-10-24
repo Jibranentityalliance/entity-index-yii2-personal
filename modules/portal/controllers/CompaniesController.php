@@ -5,7 +5,8 @@ namespace app\modules\portal\controllers;
 use app\services\EntityRepository;
 use Yii;
 
-class SearchController extends PortalController
+/** Every company, newest filing first; keywords, state, type and a filing date range narrow it down. */
+class CompaniesController extends PortalController
 {
     public function actionIndex()
     {
@@ -14,7 +15,7 @@ class SearchController extends PortalController
         $params = [
             'q' => $one('q'), 'state' => $one('state'), 'type' => $one('type'), 'status' => $one('status'),
             'county' => $one('county'), 'from' => $one('from'), 'to' => $one('to'),
-            'page' => max(1, (int) $req->get('page', 1)), 'pageSize' => 25,
+            'page' => max(1, (int) $req->get('page', 1)), 'pageSize' => 50,
         ];
         return $this->render('index', ['params' => $params, 'res' => EntityRepository::search($params)]);
     }

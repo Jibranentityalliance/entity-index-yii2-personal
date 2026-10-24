@@ -2,7 +2,7 @@
 
 /** @var yii\web\View $this */
 /** @var array $stats */
-/** @var array{companies:int,states:int,addresses:int} $week */
+/** @var array{from:?string,to:?string,companies:int,states:int,addresses:int} $week */
 
 use app\helpers\Fmt;
 use app\helpers\States;
@@ -18,7 +18,7 @@ $top = array_slice($top, 0, 10);
 <h2 class="h5 mb-3">Last 7 days</h2>
 <div class="row">
     <?php foreach ([
-        ['fa-building', 'Total companies', Fmt::num($week['companies']), ['/portal/new/index']],
+        ['fa-building', 'Total companies', Fmt::num($week['companies']), ['/portal/companies/index', 'from' => $week['from'], 'to' => $week['to']]],
         ['fa-map-marked-alt', 'States', Fmt::num($week['states']), ['/portal/states/index']],
         ['fa-map-marker-alt', 'Structured addresses', Fmt::num($week['addresses']), null],
     ] as [$icon, $label, $value, $route]): ?>

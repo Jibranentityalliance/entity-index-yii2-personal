@@ -86,18 +86,6 @@ class EntityRepository
         });
     }
 
-    /** @return array{total:int,page:int,pageSize:int,items:array[]} */
-    public static function listByDay(string $day, ?string $state = null, int $page = 1, int $pageSize = 50): array
-    {
-        $q = self::base()->select(self::SUMMARY_COLS)
-            ->andWhere(['>=', 'e.filed_at', $day . ' 00:00:00'])
-            ->andWhere(['<', 'e.filed_at', self::nextDay($day)]);
-        if ($state) {
-            $q->andWhere(['e.state' => strtoupper($state)]);
-        }
-        return self::paginate($q, ['e.filed_at' => SORT_DESC], $page, $pageSize);
-    }
-
     /**
      * Per-state counters. Median lag (filed -> searchable) covers the 7 days ending on the latest filing day.
      * @return array<string, array{state:string,total:int,latestDayCount:int,last7Days:int,medianLagHours:?float,lastIndexedAt:?string}>
@@ -138,13 +126,16 @@ class EntityRepository
     /**
      * The 7 days ending on the latest filing day: companies filed, states they were filed in, and how many of their
      * people (agent, officers) have an address with every part (street, city, state, ZIP).
-     * @return array{companies:int,states:int,addresses:int}
+     * @return array{from:?string,to:?string,companies:int,states:int,addresses:int}
      */
     public static function weekOverview(): array
     {
         $stats = self::stateStats();
+        $latest = self::latestFilingDay();
         $active = array_filter($stats, fn($s) => $s['last7Days'] > 0);
         return [
+            'from' => $latest ? (new \DateTimeImmutable($latest, new \DateTimeZone('UTC')))->modify('-6 days')->format('Y-m-d') : null,
+            'to' => $latest,
             'companies' => array_sum(array_column($stats, 'last7Days')),
             'states' => count(array_intersect_key($active, States::all())),
             'addresses' => (int) self::remember('ei.weekaddresses', function () {

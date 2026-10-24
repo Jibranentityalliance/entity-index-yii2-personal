@@ -89,7 +89,6 @@ $config = [
                 // Portal (login required)
                 'portal' => 'portal/default/index',
                 'portal/company/<state:[A-Za-z0-9-]+>/<slug:[A-Za-z0-9-]+>' => 'portal/company/view',
-                'portal/new/<state:[A-Za-z0-9-]+>' => 'portal/new/state',
                 'portal/<controller:[\w-]+>' => 'portal/<controller>/index',
                 'portal/<controller:[\w-]+>/<action:[\w-]+>' => 'portal/<controller>/<action>',
             ],

@@ -101,7 +101,7 @@ class Fmt
 
     public static function stateUrl(string $code): string
     {
-        return Url::to(['/portal/new/state', 'state' => strtolower($code)]);
+        return Url::to(['/portal/companies/index', 'state' => strtoupper($code)]);
     }
 
     /** Absolute URL on the configured canonical host (not the request host). */
@@ -137,19 +137,5 @@ class Fmt
         }
         $last = explode(' ', $parts[count($parts) - 1])[0];
         return $parts[count($parts) - 2] . ', ' . $last;
-    }
-
-    /** Last N weekdays ending on $latest (YYYY-MM-DD). States rarely file on weekends. */
-    public static function recentFilingDays(string $latest, int $n = 7): array
-    {
-        $out = [];
-        $t = self::utc($latest);
-        while (count($out) < $n) {
-            if (!in_array((int) $t->format('N'), [6, 7], true)) {
-                $out[] = $t->format('Y-m-d');
-            }
-            $t = $t->modify('-1 day');
-        }
-        return $out;
     }
 }

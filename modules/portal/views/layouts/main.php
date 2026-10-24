@@ -19,8 +19,7 @@ $light = Module::theme() === 'light';
 $route = Yii::$app->controller->route;
 $nav = [
     ['Dashboard', 'fa-tachometer-alt', ['/portal/default/index'], 'portal/default'],
-    ['Search companies', 'fa-search', ['/portal/search/index'], 'portal/search'],
-    ['New filings', 'fa-clock', ['/portal/new/index'], 'portal/new'],
+    ['Companies', 'fa-building', ['/portal/companies/index'], 'portal/companies'],
     ['Coverage by state', 'fa-map', ['/portal/states/index'], 'portal/states'],
     ['Account', 'fa-user-cog', ['/portal/account/index'], 'portal/account'],
 ];

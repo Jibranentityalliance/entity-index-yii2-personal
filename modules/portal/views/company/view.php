@@ -49,8 +49,8 @@ JS);
 <div class="mb-3">
     <?php if ($e->status !== ''): ?><?= Fmt::statusBadgeBs4($e->status) ?><?php endif ?>
     <span class="text-muted ml-2"><?= Html::encode($st['name']) ?> · <?= $na($e->entity_type) ?><?= $where ? ' · ' . Html::encode($where) : '' ?> · Filed <?= $e->filed_at ? Fmt::date($e->filed_at) : 'N/A' ?></span>
-    <?php if ($hasState): ?><a class="ml-3" href="<?= Fmt::stateUrl($st['code']) ?>">All new <?= Html::encode($st['name']) ?> filings</a><?php endif ?>
-    <?php if ($e->county): ?> · <a href="<?= Url::to(['/portal/search/index', 'state' => $st['code'], 'county' => $e->county]) ?>"><?= Html::encode($e->county) ?> County</a><?php endif ?>
+    <?php if ($hasState): ?><a class="ml-3" href="<?= Fmt::stateUrl($st['code']) ?>">All <?= Html::encode($st['name']) ?> companies</a><?php endif ?>
+    <?php if ($e->county): ?> · <a href="<?= Url::to(['/portal/companies/index', 'state' => $st['code'], 'county' => $e->county]) ?>"><?= Html::encode($e->county) ?> County</a><?php endif ?>
 </div>
 
 <div class="row">
