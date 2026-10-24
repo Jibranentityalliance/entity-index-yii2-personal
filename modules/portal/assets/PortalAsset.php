@@ -4,7 +4,7 @@ namespace app\modules\portal\assets;
 
 use yii\web\AssetBundle;
 
-/** AdminLTE 3 (bundles Bootstrap 4) loaded from CDNs, themed by css/portal.css (dark or light, toggled by js/portal.js); jQuery comes from the app-wide JqueryAsset override. */
+/** AdminLTE 3 (bundles Bootstrap 4) loaded from CDNs, themed by css/portal.css (light / dark / system: js/portal-theme.js, js/portal.js); jQuery comes from the app-wide JqueryAsset override. */
 class PortalAsset extends AssetBundle
 {
     public $basePath = '@webroot';
@@ -13,14 +13,15 @@ class PortalAsset extends AssetBundle
         'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css',
         'https://cdn.jsdelivr.net/npm/admin-lte@3.2.0/dist/css/adminlte.min.css',
         'https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Source+Code+Pro:wght@400&display=swap',
-        'css/portal.css?v=3',
+        'css/portal.css?v=4',
     ];
     public $js = [
         'https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js',
         'https://cdn.jsdelivr.net/npm/admin-lte@3.2.0/dist/js/adminlte.min.js',
-        'js/portal.js?v=1',
+        'js/portal.js?v=2',
     ];
     public $depends = [
         \yii\web\YiiAsset::class,
+        PortalThemeAsset::class,
     ];
 }

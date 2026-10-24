@@ -197,16 +197,28 @@ $r = $p->get('/portal');
 check('dashboard stat cards are AdminLTE info-boxes', preg_match_all('/class="info-box[ "]/', $r['body']) === 4 && !str_contains($r['body'], 'small-box'));
 check('portal is dark: dark-mode body and dark sidebar, with no user panel, plan text or help section', str_contains($r['body'], 'dark-mode') && str_contains($r['body'], 'sidebar-dark-primary') && !str_contains($r['body'], 'sidebar-light') && !str_contains($r['body'], 'user-panel') && !str_contains($r['body'], 'nav-header') && !str_contains($r['body'], 'Help &amp; contact'));
 $side = substr($r['body'], strpos($r['body'], '<aside'), strpos($r['body'], '</aside>') - strpos($r['body'], '<aside'));
-check('sidebar lists the four product links and nothing else', substr_count($side, 'class="nav-link') === 4 && str_contains($side, '>Companies<') && str_contains($side, '/portal/companies') && !str_contains($side, '/portal/new') && !str_contains($side, '/portal/search') && str_contains($side, '/portal/states') && str_contains($side, '/portal/account') && !str_contains($side, '/pricing') && !str_contains($side, '/faq'));
+check('sidebar lists the three product links and nothing else', substr_count($side, 'class="nav-link') === 3 && str_contains($side, '>Companies<') && str_contains($side, '/portal/companies') && !str_contains($side, '/portal/new') && !str_contains($side, '/portal/search') && str_contains($side, '/portal/states') && !str_contains($side, '/portal/account') && !str_contains($side, '/pricing') && !str_contains($side, '/faq'));
 $top = substr($r['body'], strpos($r['body'], '<nav'), strpos($r['body'], '</nav>') - strpos($r['body'], '<nav'));
-check('top bar has only the toggle and sign out', str_contains($top, 'data-widget="pushmenu"') && str_contains($top, 'Sign out') && !str_contains($top, '>Website<'));
+check('top bar has the menu toggle and the user avatar (initial of the name), and nothing else', str_contains($top, 'data-widget="pushmenu"') && str_contains($top, 'class="btn ei-avatar"') && str_contains($top, '>T</button>')
+    && !str_contains($top, 'data-ei-theme-toggle') && !str_contains($top, '>Website<'));
+$menu = substr($top, strpos($top, 'dropdown-menu'));
+$at = fn(string $needle) => (int) strpos($menu, $needle);
+check('user menu: name and email, then Account settings, Theme (light / dark / system), Sign out', str_contains($menu, 'Test User') && str_contains($menu, 'user@example.com')
+    && $at('user@example.com') < $at('Account settings') && $at('Account settings') < $at('data-ei-theme-set="light"') && $at('data-ei-theme-set="system"') < $at('Sign out')
+    && str_contains($menu, 'href="/portal/account"') && str_contains($menu, 'data-ei-theme-set="dark"') && str_contains($menu, '/portal/auth/logout'));
+check('user menu marks dark as the current theme by default', str_contains($menu, 'class="active" data-ei-theme-set="dark"') && str_contains($r['body'], 'data-ei-theme="dark"'));
 check('portal loads the dark theme stylesheet', str_contains($r['body'], 'css/portal.css'));
-check('top bar has the light/dark toggle, dark by default', str_contains($r['body'], 'data-ei-theme-toggle') && str_contains($r['body'], 'Switch to light mode') && !str_contains($r['body'], 'ei-light'));
+check('portal is dark by default and loads the theme script in the head', !str_contains($r['body'], 'ei-light') && strpos($r['body'], 'js/portal-theme.js') < strpos($r['body'], '<body'));
 // The toggle's cookie goes into the jar: a second Cookie header next to the session's would be ignored by PHP.
 file_put_contents($p->jar, "127.0.0.1\tFALSE\t/\tFALSE\t0\tei_theme\tlight\n", FILE_APPEND);
 $lr = $p->get('/portal');
 file_put_contents($p->jar, preg_replace('/^.*\tei_theme\t.*\n/m', '', file_get_contents($p->jar)));
-check('ei_theme=light renders the light theme', $lr['status'] === 200 && str_contains($lr['body'], 'ei-light') && str_contains($lr['body'], 'sidebar-light-primary') && !str_contains($lr['body'], 'dark-mode') && str_contains($lr['body'], 'Switch to dark mode'), (string) $lr['status']);
+check('ei_theme=light renders the light theme', $lr['status'] === 200 && str_contains($lr['body'], 'ei-light') && str_contains($lr['body'], 'sidebar-light-primary') && !str_contains($lr['body'], 'dark-mode') && str_contains($lr['body'], 'class="active" data-ei-theme-set="light"'), (string) $lr['status']);
+file_put_contents($p->jar, "127.0.0.1\tFALSE\t/\tFALSE\t0\tei_theme\tsystem\n", FILE_APPEND);
+$lr = $p->get('/portal');
+file_put_contents($p->jar, preg_replace('/^.*\tei_theme\t.*\n/m', '', file_get_contents($p->jar)));
+check('ei_theme=system renders dark and syncs to the device before paint', str_contains($lr['body'], 'data-ei-theme="system"') && str_contains($lr['body'], 'dark-mode')
+    && str_contains($lr['body'], 'class="active" data-ei-theme-set="system"') && strpos($lr['body'], 'eiTheme.sync()') < strpos($lr['body'], 'content-wrapper'));
 $lr = (new Http('http://127.0.0.1:18080'))->req('GET', '/portal/auth/login', [], ['Cookie: ei_theme=light']);
 check('sign-in page follows the theme cookie', str_contains($lr['body'], 'ei-light') && str_contains($lr['body'], 'data-ei-theme-toggle'));
 check('unknown theme cookie falls back to dark', str_contains((new Http('http://127.0.0.1:18080'))->req('GET', '/portal/auth/login', [], ['Cookie: ei_theme=<x>'])['body'], 'dark-mode'));

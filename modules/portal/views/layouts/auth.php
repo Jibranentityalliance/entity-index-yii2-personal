@@ -14,6 +14,7 @@ $this->registerMetaTag(['charset' => Yii::$app->charset], 'charset');
 $this->registerMetaTag(['name' => 'viewport', 'content' => 'width=device-width, initial-scale=1']);
 $this->registerMetaTag(['name' => 'robots', 'content' => 'noindex,nofollow']);
 $this->registerLinkTag(['rel' => 'icon', 'type' => 'image/svg+xml', 'href' => Yii::getAlias('@web/favicon.svg')]);
+$theme = Module::themeSetting();
 $light = Module::theme() === 'light';
 ?>
 <?php $this->beginPage() ?>
@@ -23,8 +24,9 @@ $light = Module::theme() === 'light';
     <title><?= Html::encode(($this->title ? $this->title . ' | ' : '') . 'EntityIndex Portal') ?></title>
     <?php $this->head() ?>
 </head>
-<body class="hold-transition ei-portal <?= $light ? 'ei-light' : 'dark-mode' ?> login-page">
+<body class="hold-transition ei-portal <?= $light ? 'ei-light' : 'dark-mode' ?> login-page" data-ei-theme="<?= $theme ?>">
 <?= $this->render('_theme-toggle', ['light' => $light, 'class' => 'ei-theme-toggle-corner']) ?>
+<?php if ($theme === 'system'): ?><script>eiTheme.sync();</script><?php endif ?>
 <?php $this->beginBody() ?>
 <div class="login-box">
     <div class="login-logo"><a href="<?= Url::to(['/site/index']) ?>"><?= $this->render('_logo', ['size' => 32]) ?>EntityIndex</a></div>
