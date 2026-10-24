@@ -196,6 +196,11 @@ body.ei-portal {
 .ei-portal .info-box .info-box-content { padding: 0 0 0 16px; }
 .ei-portal .info-box .info-box-text { color: var(--ei-text-3); font-size: 12px; line-height: 1.5; }
 .ei-portal .info-box .info-box-number { color: var(--ei-text); font-size: 24px; line-height: 1.33; font-weight: 400; margin-top: 4px; font-variant-numeric: tabular-nums; }
+/* empty slot reserved for a future metric */
+.ei-portal .info-box.ei-info-box-placeholder,
+.ei-portal .info-box.ei-info-box-placeholder:hover { border-style: dashed; border-color: var(--ei-border-input); background: transparent; }
+.ei-portal .info-box.ei-info-box-placeholder .info-box-icon { background: transparent !important; border-style: dashed; color: var(--ei-text-3) !important; }
+.ei-portal .info-box.ei-info-box-placeholder .info-box-number { font-size: 16px; line-height: 2; }
 
 /* ---------- buttons: pills ---------- */
 .ei-portal .btn {

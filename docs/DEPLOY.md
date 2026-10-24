@@ -179,6 +179,10 @@ Then in the web user's crontab (`sudo crontab -u www-data -e`):
 `php yii mirror/status` shows the backfill cursor, the queued changes and the company count. Create the triggers before the
 backfill so changes made while it runs are queued and applied afterwards.
 
+`people` also keeps each address's parts (street, city, state, ZIP; migration m261024_000001_people_address_parts), which
+the dashboard's "Structured addresses" card counts. Companies converted before that migration get them by converting
+everything again: `nohup sudo -u www-data php yii mirror/backfill --restart > runtime/logs/backfill.log 2>&1 &`.
+
 ## 8. Launch checklist
 
 1. `SITE_MODE=coming_soon` until the real data pipeline is loading; check `/coming-soon`, `/opt-out`, `/legal/terms`.

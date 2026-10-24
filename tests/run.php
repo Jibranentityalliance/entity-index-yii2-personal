@@ -187,18 +187,19 @@ check('register rejects mismatched passwords', $r['status'] === 200 && str_conta
 $r = $p->postForm('/portal/auth/register', ['RegisterForm' => ['name' => 'Test User', 'email' => 'user@example.com', 'password' => 'password1', 'password_repeat' => 'password1']]);
 check('register succeeds and redirects to the dashboard', $r['status'] === 302 && str_ends_with((string) $r['location'], '/portal'), $r['status'] . ' ' . $r['location']);
 $r = $p->get('/portal');
-check('dashboard shows for the new user', $r['status'] === 200 && str_contains($r['body'], 'Your plan') && !str_contains($r['body'], 'opt-out requests pending'));
+check('dashboard shows for the new user', $r['status'] === 200 && str_contains($r['body'], 'Total companies') && !str_contains($r['body'], 'Your plan'));
 echo "Portal product pages (free plan)\n";
 foreach (['/portal', '/portal/search', '/portal/new', '/portal/new/fl', '/portal/states', '/portal/account'] as $path) {
     $r = $p->get($path);
     check("portal $path renders AdminLTE", $r['status'] === 200 && str_contains($r['body'], 'main-sidebar') && $hasMeta($r['body']) && $hasHeader($r), (string) $r['status']);
 }
 $r = $p->get('/portal');
-check('dashboard stat cards are AdminLTE info-boxes', substr_count($r['body'], 'class="info-box"') === 4 && !str_contains($r['body'], 'small-box'));
+check('dashboard stat cards are AdminLTE info-boxes', preg_match_all('/class="info-box[ "]/', $r['body']) === 4 && !str_contains($r['body'], 'small-box'));
 check('portal is dark: dark-mode body and dark sidebar, with no user panel, plan text or help section', str_contains($r['body'], 'dark-mode') && str_contains($r['body'], 'sidebar-dark-primary') && !str_contains($r['body'], 'sidebar-light') && !str_contains($r['body'], 'user-panel') && !str_contains($r['body'], 'nav-header') && !str_contains($r['body'], 'Help &amp; contact'));
 $side = substr($r['body'], strpos($r['body'], '<aside'), strpos($r['body'], '</aside>') - strpos($r['body'], '<aside'));
 check('sidebar lists the five product links and nothing else', substr_count($side, 'class="nav-link') === 5 && str_contains($side, '/portal/search') && str_contains($side, '/portal/new') && str_contains($side, '/portal/states') && str_contains($side, '/portal/account') && !str_contains($side, '/pricing') && !str_contains($side, '/faq'));
-check('top bar has only the toggle and sign out', str_contains($r['body'], 'data-widget="pushmenu"') && str_contains($r['body'], 'Sign out') && !str_contains($r['body'], '>Website<'));
+$top = substr($r['body'], strpos($r['body'], '<nav'), strpos($r['body'], '</nav>') - strpos($r['body'], '<nav'));
+check('top bar has only the toggle and sign out', str_contains($top, 'data-widget="pushmenu"') && str_contains($top, 'Sign out') && !str_contains($top, '>Website<'));
 check('portal loads the dark theme stylesheet', str_contains($r['body'], 'css/portal.css'));
 check('top bar has the light/dark toggle, dark by default', str_contains($r['body'], 'data-ei-theme-toggle') && str_contains($r['body'], 'Switch to light mode') && !str_contains($r['body'], 'ei-light'));
 // The toggle's cookie goes into the jar: a second Cookie header next to the session's would be ignored by PHP.
@@ -209,7 +210,8 @@ check('ei_theme=light renders the light theme', $lr['status'] === 200 && str_con
 $lr = (new Http('http://127.0.0.1:18080'))->req('GET', '/portal/auth/login', [], ['Cookie: ei_theme=light']);
 check('sign-in page follows the theme cookie', str_contains($lr['body'], 'ei-light') && str_contains($lr['body'], 'data-ei-theme-toggle'));
 check('unknown theme cookie falls back to dark', str_contains((new Http('http://127.0.0.1:18080'))->req('GET', '/portal/auth/login', [], ['Cookie: ei_theme=<x>'])['body'], 'dark-mode'));
-check('dashboard shows newest filings and the state grid', str_contains($r['body'], 'Newest filings') && str_contains($r['body'], 'href="/portal/new/fl"'));
+check('dashboard shows the 7-day overview and the top 10 states, and nothing else', str_contains($r['body'], 'Structured addresses') && str_contains($r['body'], 'ei-info-box-placeholder')
+    && str_contains($r['body'], 'Top 10 states') && substr_count($r['body'], '<tr>') <= 11 && !str_contains($r['body'], 'Newest filings') && !str_contains($r['body'], 'ei-state-grid'));
 $r = $p->get('/portal/search?q=7045435');
 check('filing number search finds Redline Creative LLC', str_contains($r['body'], 'Redline Creative LLC') && str_contains($r['body'], '1 company'));
 check('search result links to the portal company page', str_contains($r['body'], 'href="/portal/company/ny/redline-creative-llc-7045435"'));
@@ -263,7 +265,7 @@ run('php yii seed/admin admin@example.com Admin-pass-1', $env, $root);
 $a = new Http('http://127.0.0.1:18080');
 $a->postForm('/portal/auth/login', ['LoginForm' => ['email' => 'admin@example.com', 'password' => 'Admin-pass-1']]);
 $r = $a->get('/portal');
-check('admin dashboard shows admin counters', str_contains($r['body'], 'opt-out requests pending') && str_contains($r['body'], 'new contact messages') && (bool) preg_match('/\d+ on waitlist/', $r['body']));
+check('admin dashboard renders without admin counters', $r['status'] === 200 && str_contains($r['body'], 'Total companies') && !str_contains($r['body'], 'opt-out requests pending'));
 
 run('php yii seed/user pro@example.com Pro-pass-1 pro', $env, $root);
 $pro = new Http('http://127.0.0.1:18080');
@@ -465,7 +467,9 @@ $conv = fn(string $sql) => $pdo->query($sql)->fetchColumn();
 check('mirror: repeat submissions are one company, newest row wins', $conv("SELECT COUNT(*) FROM entities WHERE state = 'FL' AND url_key = 'l26000300'") == 1
     && $conv("SELECT name FROM entities WHERE url_key = 'l26000300'") === 'PHONE SAMPLE LLC RENAMED');
 check('mirror: malformed rows are kept with missing values empty', $conv("SELECT COUNT(*) FROM entities WHERE source_id = 209 AND state = 'NA' AND url_key = 'r209' AND name = ''") == 1);
+check('mirror: address parts stored next to the one-line address', $conv("SELECT COUNT(*) FROM people WHERE zip = '60612-4028' AND street <> '' AND city <> '' AND state <> ''") >= 1);
 check('mirror: rerunning backfill does nothing new', str_contains($capture('php yii mirror/backfill', $mirrorEnv)[1], 'backfill done: 0 rows'));
+check('mirror/backfill --restart converts every row again', str_contains($capture('php yii mirror/backfill --restart', $mirrorEnv)[1], 'backfill done: 18 rows'));
 $pdo->exec("DELETE FROM manual_companies WHERE id = 301");
 $pdo->exec("INSERT INTO mirror_changes (source_id) VALUES (301), (209)");
 $pdo->exec("DELETE FROM manual_companies WHERE id = 209");

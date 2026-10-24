@@ -2,6 +2,7 @@
 
 namespace app\services;
 
+use app\helpers\States;
 use app\models\Entity;
 use Yii;
 use yii\db\ActiveQuery;
@@ -132,6 +133,34 @@ class EntityRepository
             }
             return $stats;
         });
+    }
+
+    /**
+     * The 7 days ending on the latest filing day: companies filed, states they were filed in, and how many of their
+     * people (agent, officers) have an address with every part (street, city, state, ZIP).
+     * @return array{companies:int,states:int,addresses:int}
+     */
+    public static function weekOverview(): array
+    {
+        $stats = self::stateStats();
+        $active = array_filter($stats, fn($s) => $s['last7Days'] > 0);
+        return [
+            'companies' => array_sum(array_column($stats, 'last7Days')),
+            'states' => count(array_intersect_key($active, States::all())),
+            'addresses' => (int) self::remember('ei.weekaddresses', function () {
+                $latest = self::latestFilingDay();
+                if (!$latest) {
+                    return 0;
+                }
+                $weekStart = (new \DateTimeImmutable($latest, new \DateTimeZone('UTC')))->modify('-6 days')->format('Y-m-d');
+                $q = (new Query())->from(['p' => 'people'])->innerJoin(['e' => 'entities'], 'e.id = p.entity_id')
+                    ->where(['>=', 'e.filed_at', $weekStart . ' 00:00:00']);
+                foreach (['street', 'city', 'state', 'zip'] as $col) {
+                    $q->andWhere(['<>', "p.$col", '']); // also false for NULL
+                }
+                return $q->count();
+            }),
+        ];
     }
 
     public static function totalCount(): int

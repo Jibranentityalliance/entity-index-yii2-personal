@@ -13,6 +13,7 @@ use yii\helpers\Console;
  *
  *   php yii mirror/backfill              convert every row once (resumable: continues after the last converted id)
  *   php yii mirror/backfill --limit=5000 only the next 5,000 rows
+ *   php yii mirror/backfill --restart    start over from the first row (re-converts companies already there)
  *   php yii mirror/apply                 replay changes recorded by the replica triggers (cron, every minute)
  *   php yii mirror/status                progress and queue size
  *
@@ -24,16 +25,21 @@ class MirrorController extends Controller
     public $limit;
     /** @var int rows per transaction (backfill) */
     public $batch = 1000;
+    /** @var bool start over from the first source row (backfill) */
+    public $restart = false;
 
     public function options($actionID)
     {
-        return array_merge(parent::options($actionID), $actionID === 'backfill' ? ['limit', 'batch'] : []);
+        return array_merge(parent::options($actionID), $actionID === 'backfill' ? ['limit', 'batch', 'restart'] : []);
     }
 
     public function actionBackfill(): int
     {
         return $this->locked(function (MirrorConverter $c) {
             $start = microtime(true);
+            if ($this->restart) {
+                $c->setState(MirrorConverter::CURSOR, 0);
+            }
             $this->stdout(sprintf("%s backfill from id %d\n", gmdate('Y-m-d H:i:s'), $c->state(MirrorConverter::CURSOR)));
             [$done, $cursor] = $c->backfill(max(1, (int) $this->batch), $this->limit === null ? null : (int) $this->limit,
                 function (int $n, int $cursor) use ($start) {

@@ -15,7 +15,8 @@ use yii\helpers\Inflector;
  * - One company per state + filing number. Repeat submissions update it; the newest source row wins.
  * - Malformed rows are kept: unknown values stay empty/NULL and the pages show "N/A". Without a valid state the
  *   company is stored under state 'NA'; without a filing number its url_key is "r{source_id}".
- * - The registered agent and officers become `people` rows (role agent / officer), with address and phone.
+ * - The registered agent and officers become `people` rows (role agent / officer), with address (one line and its
+ *   street / city / state / ZIP parts) and phone.
  * - `backfill()` walks the whole table once (resumable); `applyChanges()` replays the ids that the replica triggers
  *   (docs/mirror-triggers.sql) wrote to mirror_changes, including deletes.
  * - Only reads the mirror. Writes go to this app's database.
@@ -144,6 +145,10 @@ class MirrorConverter
                 'role' => $p['role'] === 'registered_agent' ? 'agent' : 'officer',
                 'title' => isset($p['title']) ? mb_substr($p['title'], 0, 150) : null,
                 'address' => $p['full_address'] ?? ($parts ? mb_substr(implode(', ', $parts), 0, 500) : null),
+                'street' => $p['address'] ?? null,
+                'city' => $p['city'] ?? null,
+                'state' => $p['state'] ?? null,
+                'zip' => $p['zip_code'] ?? null,
                 'phone' => $p['phone'] ?? null,
             ];
         }
@@ -200,11 +205,11 @@ class MirrorConverter
             $peopleRows = [];
             foreach ($winners as $entityId => $people) {
                 foreach ($people as $p) {
-                    $peopleRows[] = [$entityId, $p['name'], $p['role'], $p['title'], $p['address'], $p['phone']];
+                    $peopleRows[] = [$entityId, $p['name'], $p['role'], $p['title'], $p['address'], $p['street'], $p['city'], $p['state'], $p['zip'], $p['phone']];
                 }
             }
             if ($peopleRows) {
-                $this->db->createCommand()->batchInsert('people', ['entity_id', 'name', 'role', 'title', 'address', 'phone'], $peopleRows)->execute();
+                $this->db->createCommand()->batchInsert('people', ['entity_id', 'name', 'role', 'title', 'address', 'street', 'city', 'state', 'zip', 'phone'], $peopleRows)->execute();
             }
         }
         $mapSql = $this->db->createCommand()->batchInsert('mirror_map', ['source_id', 'entity_id'], $mapRows)->getRawSql();

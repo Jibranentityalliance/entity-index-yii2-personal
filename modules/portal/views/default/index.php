@@ -1,13 +1,8 @@
 <?php
 
 /** @var yii\web\View $this */
-/** @var app\models\User $user */
-/** @var string|null $latestDay */
-/** @var array|null $latest */
 /** @var array $stats */
-/** @var int $total */
-/** @var int $week */
-/** @var array|null $adminStats */
+/** @var array{companies:int,states:int,addresses:int} $week */
 
 use app\helpers\Fmt;
 use app\helpers\States;
@@ -15,68 +10,42 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 
 $this->title = 'Dashboard';
-$latestCount = $latest['total'] ?? 0;
+// Top 10 states by companies filed in the last 7 days.
+$top = array_filter(States::all(), fn($s) => ($stats[$s['code']]['last7Days'] ?? 0) > 0);
+uasort($top, fn($a, $b) => $stats[$b['code']]['last7Days'] <=> $stats[$a['code']]['last7Days']);
+$top = array_slice($top, 0, 10);
 ?>
+<h2 class="h5 mb-3">Last 7 days</h2>
 <div class="row">
     <?php foreach ([
-        ['fa-building', 'Latest day', Fmt::num($latestCount), ['/portal/new/index']],
-        ['fa-calendar-week', 'Last 7 days', Fmt::num($week), ['/portal/states/index']],
-        ['fa-database', 'Indexed', Fmt::num($total), ['/portal/search/index']],
-        ['fa-tag', 'Your plan', ucfirst($user->plan), ['/pricing/index']],
+        ['fa-building', 'Total companies', Fmt::num($week['companies']), ['/portal/new/index']],
+        ['fa-map-marked-alt', 'States', Fmt::num($week['states']), ['/portal/states/index']],
+        ['fa-map-marker-alt', 'Structured addresses', Fmt::num($week['addresses']), null],
     ] as [$icon, $label, $value, $route]): ?>
         <div class="col-sm-6 col-lg-3">
             <div class="info-box">
                 <span class="info-box-icon"><i class="fas <?= $icon ?>"></i></span>
                 <div class="info-box-content">
-                    <span class="info-box-text"><a href="<?= Url::to($route) ?>" class="text-reset stretched-link"><?= Html::encode($label) ?></a></span>
+                    <span class="info-box-text"><?php if ($route): ?><a href="<?= Url::to($route) ?>" class="text-reset stretched-link"><?= Html::encode($label) ?></a><?php else: ?><?= Html::encode($label) ?><?php endif ?></span>
                     <span class="info-box-number"><?= Html::encode($value) ?></span>
                 </div>
             </div>
         </div>
     <?php endforeach ?>
-</div>
-
-<?php if ($adminStats): ?>
-    <div class="alert alert-light border">
-        <strong>Admin:</strong>
-        <?= Fmt::num($adminStats['optOutPending']) ?> opt-out requests pending ·
-        <?= Fmt::num($adminStats['contactNew']) ?> new contact messages ·
-        <?= Fmt::num($adminStats['waitlist']) ?> on waitlist
-    </div>
-<?php endif ?>
-
-<div class="card">
-    <div class="card-body">
-        <form action="<?= Url::to(['/portal/search/index']) ?>" role="search">
-            <div class="form-row">
-                <div class="col-md-6 mb-2"><label for="dq" class="sr-only">Search</label><input id="dq" class="form-control form-control-lg" name="q" type="search" placeholder="Company name, officer or agent name, or filing number" autofocus></div>
-                <div class="col-md-3 mb-2"><label for="dstate" class="sr-only">State</label>
-                    <select id="dstate" class="form-control form-control-lg" name="state"><option value="">All states</option>
-                        <?php foreach (States::all() as $s): ?><option value="<?= $s['code'] ?>"><?= Html::encode($s['name']) ?></option><?php endforeach ?>
-                    </select></div>
-                <div class="col-md-3 mb-2"><button class="btn btn-primary btn-lg btn-block" type="submit"><i class="fas fa-search"></i> Search</button></div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="info-box ei-info-box-placeholder">
+            <span class="info-box-icon"><i class="fas fa-plus"></i></span>
+            <div class="info-box-content">
+                <span class="info-box-text text-muted">More metrics</span>
+                <span class="info-box-number text-muted">Coming soon</span>
             </div>
-        </form>
-    </div>
-</div>
-
-<div class="card">
-    <div class="card-header">
-        <h3 class="card-title">Newest filings<?= $latestDay ? ' · ' . Fmt::dayLong($latestDay) : '' ?></h3>
-        <div class="card-tools"><a href="<?= Url::to(['/portal/new/index']) ?>">See all <?= Fmt::num($latestCount) ?> →</a></div>
-    </div>
-    <div class="card-body p-0"><?= $this->render('/_partials/entity-table', ['items' => $latest['items'] ?? [], 'empty' => 'No filings indexed yet.']) ?></div>
-</div>
-
-<div class="card">
-    <div class="card-header"><h3 class="card-title">New businesses by state (latest filing day)</h3><div class="card-tools"><a href="<?= Url::to(['/portal/states/index']) ?>">Coverage &amp; freshness →</a></div></div>
-    <div class="card-body">
-        <div class="row ei-state-grid">
-            <?php foreach (States::all() as $s): $n = $stats[$s['code']]['latestDayCount'] ?? 0; ?>
-                <div class="col-6 col-md-4 col-lg-3 mb-2">
-                    <a href="<?= Fmt::stateUrl($s['code']) ?>" class="btn btn-default btn-block"><span><?= Html::encode($s['name']) ?></span><span class="<?= $n ? 'font-weight-bold' : 'text-muted' ?>"><?= $n ? Fmt::num($n) : '–' ?></span></a>
-                </div>
-            <?php endforeach ?>
         </div>
     </div>
 </div>
+<p class="text-muted small mt-n2">Structured addresses: agent and officer addresses with street, city, state and ZIP each available.</p>
+
+<div class="d-flex align-items-baseline justify-content-between mt-2 mb-3">
+    <h2 class="h5 mb-0">Top 10 states · last 7 days</h2>
+    <a href="<?= Url::to(['/portal/states/index']) ?>">All states →</a>
+</div>
+<?= $this->render('/states/_table', ['stats' => $stats, 'states' => $top]) ?>
