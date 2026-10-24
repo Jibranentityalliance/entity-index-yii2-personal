@@ -6,16 +6,13 @@
 
 use app\helpers\Fmt;
 use app\helpers\States;
-use app\modules\portal\assets\DateRangeAsset;
 use yii\helpers\Html;
 use yii\helpers\Url;
 
-DateRangeAsset::register($this);
 $q = $params['q'];
 $this->title = 'Companies';
 $st = $params['state'] ? States::byCode($params['state']) : null;
 $filtered = (bool) array_filter(array_diff_key($params, ['page' => 1, 'pageSize' => 1]));
-$range = implode(' to ', array_filter([$params['from'], $params['to']]));
 
 $hrefFor = function (int $p) use ($params): string {
     $qs = array_filter($params, fn($v, $k) => $v !== null && $v !== '' && !in_array($k, ['page', 'pageSize'], true), ARRAY_FILTER_USE_BOTH);
@@ -46,13 +43,7 @@ $hrefFor = function (int $p) use ($params): string {
                     <?php foreach (States::ENTITY_TYPES as $t): ?><option<?= $params['type'] === $t ? ' selected' : '' ?>><?= Html::encode($t) ?></option><?php endforeach ?>
                 </select>
             </div>
-            <div class="col-sm-6 col-lg-3 ei-daterange">
-                <label for="s-dates" class="sr-only">Filing date</label>
-                <i class="far fa-calendar ei-daterange-icon" aria-hidden="true"></i>
-                <input id="s-dates" class="form-control" type="text" value="<?= Html::encode($range) ?>" placeholder="Filing date" autocomplete="off" data-ei-daterange>
-                <input type="hidden" name="from" value="<?= Html::encode($params['from']) ?>">
-                <input type="hidden" name="to" value="<?= Html::encode($params['to']) ?>">
-            </div>
+            <?= $this->render('/_partials/daterange', ['id' => 's-dates', 'from' => $params['from'], 'to' => $params['to'], 'class' => 'col-sm-6 col-lg-3']) ?>
             <?php if ($params['county']): ?><input type="hidden" name="county" value="<?= Html::encode($params['county']) ?>"><?php endif ?>
             <div class="col-sm-6 col-lg-auto d-flex">
                 <button class="btn btn-primary flex-fill" type="submit"><i class="fas fa-search"></i> Search</button>

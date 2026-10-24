@@ -37,7 +37,7 @@ Forms (AJAX, CSRF-protected, honeypot): `POST /api/waitlist`, `POST /api/opt-out
 | `/portal` | dashboard: last-7-days cards (companies, states, structured addresses) and the top 10 states |
 | `/portal/companies` | every company, newest first, 50 per page; keyword, state, type and filing-date-range filters (`?state=FL` is the per-state list) |
 | `/portal/company/{state}/{slug}-{filing-key}` | company record (officers and addresses are visible on paid plans and to admins, locked on Free) |
-| `/portal/states` | coverage and freshness per jurisdiction |
+| `/portal/states` | States: coverage and freshness per jurisdiction (last 24h, last 7 days, median lag, status), filterable by name, source, median lag, filing dates and status; a state's name opens Companies filtered to it |
 | `/portal/account` | profile and password |
 | `/portal/auth/login`, `/portal/auth/register`, `/portal/auth/logout` (POST) | authentication |
 

@@ -227,6 +227,19 @@ check('state filter narrows to that state', str_contains($r['body'], ' in Florid
 check('new filings and search pages are gone', $p->get('/portal/new')['status'] === 404 && $p->get('/portal/new/fl')['status'] === 404 && $p->get('/portal/search')['status'] === 404);
 check('state links go to companies filtered by state', str_contains($p->get('/portal/states')['body'], 'href="/portal/companies?state=FL"'));
 check('coverage table lists Wyoming', str_contains($p->get('/portal/states')['body'], 'Wyoming'));
+$r = $p->get('/portal/states');
+$side = substr($r['body'], strpos($r['body'], '<aside'), strpos($r['body'], '</aside>') - strpos($r['body'], '<aside'));
+check('states page is called States, with a Last 24h column and the filter row', str_contains($side, '>States<') && str_contains($r['body'], '<th class="text-right">Last 24h</th>')
+    && !str_contains($r['body'], 'Latest day') && str_contains($r['body'], 'name="source"') && str_contains($r['body'], 'name="lag"') && str_contains($r['body'], 'name="status"') && str_contains($r['body'], 'data-ei-daterange'));
+$stateRows = fn(string $qs) => preg_match_all('/<td><a class="font-weight-bold"/', $p->get('/portal/states' . $qs)['body']);
+check('states: no filters lists all 51', $stateRows('') === 51);
+check('states: source filter', $stateRows('?source=api') === 4 && $stateRows('?source=file') === 1 && $stateRows('?source=website') === 46);
+check('states: name filter', $stateRows('?q=new') === 4 && $stateRows('?q=FL') === 1);
+check('states: status filter splits the 51', $stateRows('?status=on_time') + $stateRows('?status=delayed') + $stateRows('?status=not_live') === 51);
+check('states: median lag filter matches the on-time count', $stateRows('?lag=24') === $stateRows('?status=on_time'));
+$r = $p->get('/portal/states?from=2020-01-01&to=2020-01-31');
+check('states: a date range replaces the 7-day column', str_contains($r['body'], 'Filed Jan 1, 2020 – Jan 31, 2020') && !str_contains($r['body'], '>Last 7 days<'));
+check('states: bad dates are ignored', $p->get('/portal/states?from=nope&to=2026-13-45')['status'] === 200);
 $r = $p->get('/portal/company/ny/redline-creative-llc-7045435');
 check('company page renders for a logged-in user', $r['status'] === 200 && str_contains($r['body'], 'Company details'));
 check('free plan: registered agent is locked', !str_contains($r['body'], 'Statewide Filing Agents LLC') && str_contains($r['body'], 'Registered agent details are a Pro feature'));

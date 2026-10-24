@@ -87,8 +87,9 @@ class EntityRepository
     }
 
     /**
-     * Per-state counters. Median lag (filed -> searchable) covers the 7 days ending on the latest filing day.
-     * @return array<string, array{state:string,total:int,latestDayCount:int,last7Days:int,medianLagHours:?float,lastIndexedAt:?string}>
+     * Per-state counters. last24h counts companies that became searchable in the last 24 hours; last7Days and the
+     * median lag (filed -> searchable) cover the 7 days ending on the latest filing day.
+     * @return array<string, array{state:string,total:int,last24h:int,latestDayCount:int,last7Days:int,medianLagHours:?float,lastIndexedAt:?string}>
      */
     public static function stateStats(): array
     {
@@ -97,8 +98,13 @@ class EntityRepository
             $stats = [];
             $totals = (new Query())->select(['state', 'total' => 'COUNT(*)', 'last' => 'MAX(indexed_at)'])->from('entities')->groupBy('state')->all();
             foreach ($totals as $r) {
-                $stats[$r['state']] = ['state' => $r['state'], 'total' => (int) $r['total'], 'latestDayCount' => 0, 'last7Days' => 0,
+                $stats[$r['state']] = ['state' => $r['state'], 'total' => (int) $r['total'], 'last24h' => 0, 'latestDayCount' => 0, 'last7Days' => 0,
                     'medianLagHours' => null, 'lastIndexedAt' => $r['last']];
+            }
+            $recent = (new Query())->select(['state', 'n' => 'COUNT(*)'])->from('entities')
+                ->where(['>=', 'indexed_at', gmdate('Y-m-d H:i:s', time() - 86400)])->groupBy('state')->all();
+            foreach ($recent as $r) {
+                $stats[$r['state']]['last24h'] = (int) $r['n'];
             }
             if ($latest) {
                 $weekStart = (new \DateTimeImmutable($latest, new \DateTimeZone('UTC')))->modify('-6 days')->format('Y-m-d');
@@ -152,6 +158,26 @@ class EntityRepository
                 return $q->count();
             }),
         ];
+    }
+
+    /**
+     * Companies filed per state between two days (inclusive, YYYY-MM-DD; either may be null for open-ended).
+     * @return array<string, int>
+     */
+    public static function countsByState(?string $from, ?string $to): array
+    {
+        $from = $from !== null && self::isDay($from) ? $from : null;
+        $to = $to !== null && self::isDay($to) ? $to : null;
+        return self::remember("ei.statecounts.$from.$to", function () use ($from, $to) {
+            $q = (new Query())->select(['state', 'n' => 'COUNT(*)'])->from('entities')->groupBy('state');
+            if ($from) {
+                $q->andWhere(['>=', 'filed_at', $from . ' 00:00:00']);
+            }
+            if ($to) {
+                $q->andWhere(['<', 'filed_at', self::nextDay($to)]);
+            }
+            return array_map('intval', array_column($q->all(), 'n', 'state'));
+        });
     }
 
     public static function totalCount(): int

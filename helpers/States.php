@@ -9,6 +9,13 @@ class States
         'LLC', 'Corporation', 'Foreign LLC', 'Foreign Corporation', 'Nonprofit Corporation', 'LP', 'LLP',
     ];
 
+    /** Where a state's filings come from, by collection method: [label, badge colour]. */
+    public const SOURCES = ['api' => ['Open-data API', 'success'], 'file' => ['Bulk file', 'success'], 'website' => ['Website', 'secondary']];
+    /** Feed health: on time = median lag of 24h or less. [label, badge colour] */
+    public const HEALTH = ['on_time' => ['On time', 'success'], 'delayed' => ['Delayed', 'warning'], 'not_live' => ['Not live', 'danger']];
+    /** Median lag ranges, in hours: [label, from (exclusive), to (inclusive)]. */
+    public const LAGS = ['24' => ['24h or less', -INF, 24], '48' => ['24–48h', 24, 48], 'over48' => ['Over 48h', 48, INF]];
+
     /** @var array<string, array{code:string,name:string,slug:string,method:string}>|null */
     private static ?array $byCode = null;
 
@@ -50,5 +57,21 @@ class States
             }
         }
         return null;
+    }
+
+    /** SOURCES key for a jurisdiction (states still collected from the website are 'scrape' or 'tbd' in states.json). */
+    public static function source(array $state): string
+    {
+        return in_array($state['method'], ['api', 'file'], true) ? $state['method'] : 'website';
+    }
+
+    /** HEALTH key for a jurisdiction's per-state counters (EntityRepository::stateStats), null when nothing is indexed yet. */
+    public static function health(?array $stats): string
+    {
+        if (!$stats) {
+            return 'not_live';
+        }
+        $lag = $stats['medianLagHours'] ?? null;
+        return $lag !== null && $lag <= 24 ? 'on_time' : 'delayed';
     }
 }
