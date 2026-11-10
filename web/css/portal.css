@@ -96,12 +96,14 @@ body.ei-portal {
 .ei-portal .main-header .btn-link:hover { color: var(--ei-text); text-decoration: none; }
 
 /* ---------- user menu: initial avatar + dropdown ---------- */
-.ei-portal .ei-avatar {
+.ei-portal .ei-avatar,
+.ei-portal .btn.ei-avatar {
   width: 36px;
   height: 36px;
   padding: 0;
-  display: inline-grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 50%;
   background: var(--ei-surface);
   border: 1px solid var(--ei-border-input);
