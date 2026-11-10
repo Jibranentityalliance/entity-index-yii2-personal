@@ -15,6 +15,16 @@ return [
     // Calendar days on the home page ("added per day", "today") are counted in this time zone.
     'reportTz' => env('REPORT_TZ', 'America/New_York'),
 
+    // API limits per plan; admins are unlimited. Not final: change the numbers here and nothing else.
+    //   monthlyCalls  requests per calendar month (UTC), all of the account's keys together
+    //   monthlyRows   companies returned per calendar month; a request is cut short at the cap, then 429
+    //   perMinute     requests per minute
+    // The portal API pages, the API headers and the docs page all read these values.
+    'apiLimits' => [
+        'business' => ['monthlyCalls' => 25000, 'monthlyRows' => 50000, 'perMinute' => 120],
+        'bulk' => ['monthlyCalls' => 500000, 'monthlyRows' => 5000000, 'perMinute' => 600],
+    ],
+
     // Proposed prices — change here; the pricing page and home page read from this list.
     'tiers' => [
         [

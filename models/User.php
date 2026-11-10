@@ -51,7 +51,7 @@ class User extends ActiveRecord implements IdentityInterface
 
     public static function findIdentityByAccessToken($token, $type = null)
     {
-        return null; // API keys arrive in a later phase
+        return null;
     }
 
     public static function findByEmail(string $email): ?self
@@ -88,6 +88,11 @@ class User extends ActiveRecord implements IdentityInterface
     public function hasFullAccess(): bool
     {
         return $this->isAdmin() || in_array($this->plan, ['pro', 'business', 'bulk'], true);
+    }
+
+    public function hasApiAccess(): bool
+    {
+        return $this->isAdmin() || in_array($this->plan, ['business', 'bulk'], true);
     }
 
     public function isAdmin(): bool

@@ -19,6 +19,9 @@ $config = [
         'portal' => [
             'class' => \app\modules\portal\Module::class,
         ],
+        'apiv1' => [
+            'class' => \app\modules\apiv1\Module::class,
+        ],
     ],
     'components' => [
         'request' => [
@@ -85,6 +88,13 @@ $config = [
                 'api/opt-out' => 'forms/opt-out',
                 'api/contact' => 'forms/contact',
                 'sitemap.xml' => 'sitemap/index',
+
+                'api/v1' => 'apiv1/default/index',
+                'api/v1/me' => 'apiv1/me/index',
+                'api/v1/entities' => 'apiv1/entities/index',
+                'api/v1/entities/<id:\d+>' => 'apiv1/entities/view',
+                'api/v1/entities/<state:[A-Za-z]{2}>/<filing:[A-Za-z0-9-]+>' => 'apiv1/entities/filing',
+                'api/v1/<path:.*>' => 'apiv1/default/not-found',
 
                 // Portal (login required)
                 'portal' => 'portal/default/index',

@@ -44,7 +44,23 @@ Forms (AJAX, CSRF-protected, honeypot): `POST /api/waitlist`, `POST /api/opt-out
 The portal UI uses stock AdminLTE 3 / Bootstrap 4 components (info-box, card, callout, btn, table, progress…) in AdminLTE's `dark-mode`, themed by `web/css/portal.css`: near-black canvas, monochrome surfaces separated by 1px borders (no shadows), pill buttons and tags, 16px cards, 8px inputs, Inter, and a single green reserved for primary actions, the logo and the active nav item. The user menu (the initial avatar, top right) has Account settings, a Light / Dark / System theme choice and Sign out; the sign-in pages keep a sun/moon button. The choice is kept in the `ei_theme` cookie and the layouts render it server-side; System renders dark and `web/js/portal-theme.js` (loaded in `<head>`) switches to light before the page paints when the device prefers it, and follows the device when it changes. Reach for a stock component before writing CSS, and style with the theme variables at the top of `portal.css` so both themes stay in step.
 
 `php yii seed/admin you@example.com 'password'` creates an admin. Paid plans are set on the `user.plan` column (`free|pro|business|bulk`) until billing exists.
-Not built yet: saved searches, CSV export, API keys / API v1, billing (Stripe is a placeholder), usage limits, admin queues for contact / opt-out / waitlist.
+API keys and the read-only REST API are documented in the **API** section below.
+Not built yet: saved searches, CSV export, billing (Stripe is a placeholder), usage limits, admin queues for contact / opt-out / waitlist.
+
+## API (v1)
+
+Customer-facing documentation is the portal page `/portal/api-docs` (`modules/portal/views/api-docs/index.php`); update it when endpoints or parameters change.
+
+Business, Data license and admin accounts can create up to 5 keys at `/portal/api-keys`. Send a key as `Authorization: Bearer eik_...` (or `X-API-Key`). Responses are JSON, GET only. Officers, addresses and phone numbers are always included, since the API is paid-only.
+
+| Endpoint | Returns |
+|---|---|
+| `GET /api/v1/me` | the key's account and plan |
+| `GET /api/v1/entities` | companies, newest first, with cursor paging |
+| `GET /api/v1/entities/{id}` | one company with its filings |
+| `GET /api/v1/entities/{state}/{filing_number}` | the same, by state filing number |
+
+List filters: `q`, `state` (2 letters), `type`, `status`, `county`, `filed_after` and `filed_before` (dates, both inclusive), `order` (`desc` default, `asc` for incremental syncs), `limit` (1 to 1000, default 100), `cursor`. Take `next_cursor` from a response and send it as `cursor` for the next page until `has_more` is false. Paging walks company ids, so it stays fast and stable on any number of rows, and new companies never shift pages already read. **API limits are not final and are meant to be changed.** They live in one place, `config/params.php`, under `apiLimits`, per plan (`business`, `bulk`; admins are unlimited): `monthlyCalls` (requests a calendar month, UTC), `monthlyRows` (companies returned a calendar month, the "export rows" cap from the pricing page) and `perMinute` (requests a minute). Edit the numbers there and nothing else; the keys page, the API headers and the docs page all read them. Current placeholders: Business 25,000 calls, 50,000 rows and 120 a minute; Data license 500,000 calls, 5,000,000 rows and 600 a minute. Every response carries `X-RateLimit-*` (per minute), `X-Quota-*` (calls in the month) and `X-Rows-*` (rows in the month) headers. The row cap is hard: a list request is cut short when fewer rows are left than it asked for, and once none are left every call returns `429` with `Retry-After`. Going over any limit returns `429`; calls rejected by the per-minute limit are not counted. Usage is shown on the API keys page and in `/api/v1/me`. The key is only stored as a hash, so a lost key cannot be recovered.
 
 ## Configuration (`.env` or real environment variables; real env wins)
 

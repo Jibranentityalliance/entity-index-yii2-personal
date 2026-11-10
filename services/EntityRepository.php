@@ -29,8 +29,22 @@ class EntityRepository
      */
     public static function search(array $p): array
     {
-        $q = self::base();
+        $q = self::filteredQuery($p, $key);
         $q->select(self::SUMMARY_COLS);
+        $order = ['e.filed_at' => SORT_DESC];
+        $orderParams = [];
+        if ($key !== null) {
+            $norm = self::normalize($p['q'] ?? '');
+            // Filing-number match first, then names starting with the query, then everything else.
+            $orderParams = [':ukey' => $key, ':starts' => addcslashes($norm, '%_\\') . '%'];
+            $order = '(CASE WHEN e.url_key = :ukey THEN 3 WHEN e.name LIKE :starts THEN 2 ELSE 1 END) DESC, e.filed_at DESC';
+        }
+        return self::paginate($q, $order, $p['page'] ?? 1, $p['pageSize'] ?? 25, $orderParams);
+    }
+
+    public static function filteredQuery(array $p, ?string &$key = null): ActiveQuery
+    {
+        $q = self::base();
 
         if (!empty($p['state'])) {
             $q->andWhere(['e.state' => strtoupper($p['state'])]);
@@ -53,8 +67,7 @@ class EntityRepository
 
         $norm = self::normalize($p['q'] ?? '');
         $terms = $norm === '' ? [] : explode(' ', $norm);
-        $order = ['e.filed_at' => SORT_DESC];
-        $orderParams = [];
+        $key = null;
         if ($terms) {
             $key = preg_replace('/[^a-z0-9]/', '', strtolower($p['q']));
             $nameMatch = self::termsCondition('e.name', $terms, 'n');
@@ -65,11 +78,8 @@ class EntityRepository
                 $conds[] = ['e.url_key' => $key];
             }
             $q->andWhere($conds);
-            // Filing-number match first, then names starting with the query, then everything else.
-            $orderParams = [':ukey' => $key, ':starts' => addcslashes($norm, '%_\\') . '%'];
-            $order = '(CASE WHEN e.url_key = :ukey THEN 3 WHEN e.name LIKE :starts THEN 2 ELSE 1 END) DESC, e.filed_at DESC';
         }
-        return self::paginate($q, $order, $p['page'] ?? 1, $p['pageSize'] ?? 25, $orderParams);
+        return $q;
     }
 
     /** Most recent calendar day (YYYY-MM-DD, UTC) that has any filings, optionally per state. */

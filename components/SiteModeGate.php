@@ -19,6 +19,9 @@ class SiteModeGate
             return;
         }
         $route = $event->action->getUniqueId();
+        if (str_starts_with($route, 'apiv1/')) {
+            return;
+        }
         if (in_array($route, self::ALLOWED, true)) {
             return;
         }

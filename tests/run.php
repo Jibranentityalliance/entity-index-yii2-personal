@@ -521,5 +521,92 @@ $pdo->exec("UPDATE `user` SET plan = 'pro' WHERE email = 'pro@example.com'");
 proc_terminate($srvM);
 $pdo->exec('DROP TABLE manual_companies');
 
+$srvA = startServer(18088, $env, $root);
+$a = new Http('http://127.0.0.1:18088');
+$api = fn(string $path, ?string $token = null) => $a->req('GET', $path, [], $token ? ["Authorization: Bearer $token"] : []);
+$a->postForm('/portal/auth/login', ['LoginForm' => ['email' => 'pro@example.com', 'password' => 'Pro-pass-1']]);
+$page = $a->get('/portal/api-keys')['body'];
+check('pro: API keys page shows the upgrade notice and no form', str_contains($page, 'API access is not part of your plan') && !str_contains($page, 'Create key'));
+check('pro: creating a key is forbidden', $a->postForm('/portal/api-keys/create', ['name' => 'x'], '/portal/api-keys')['status'] === 403);
+$pdo->exec("UPDATE `user` SET plan = 'business' WHERE email = 'pro@example.com'");
+check('business: API keys page has the create form', str_contains($a->get('/portal/api-keys')['body'], 'Create key'));
+$a->postForm('/portal/api-keys/create', ['name' => 'Test key'], '/portal/api-keys');
+$page = $a->get('/portal/api-keys')['body'];
+preg_match('/value="(eik_[0-9a-f]{48})"/', $page, $km);
+$token = $km[1] ?? '';
+check('creating a key shows the token once', $token !== '');
+check('the token is not stored, only its hash', $token !== '' && $pdo->query("SELECT COUNT(*) FROM api_key WHERE key_hash = " . $pdo->quote(hash('sha256', $token)) . " AND key_prefix = " . $pdo->quote(substr($token, 0, 12)))->fetchColumn() == 1
+    && $pdo->query("SELECT COUNT(*) FROM api_key WHERE key_hash = " . $pdo->quote($token))->fetchColumn() == 0);
+check('the token is not shown on a second page view', !str_contains($a->get('/portal/api-keys')['body'], $token));
+$r = $api('/api/v1/me');
+check('API without a key is 401 JSON', $r['status'] === 401 && str_contains($r['headers'], 'application/json') && str_contains($r['headers'], 'WWW-Authenticate'), $r['status'] . ' ' . $r['body']);
+check('API with a wrong key is 401', $api('/api/v1/me', 'eik_' . str_repeat('0', 48))['status'] === 401);
+$r = $api('/api/v1/me', $token);
+check('API with a valid key returns the account', $r['status'] === 200 && (json_decode($r['body'], true)['plan'] ?? '') === 'business', $r['status'] . ' ' . $r['body']);
+check('API does not set a session cookie', !str_contains($r['headers'], 'Set-Cookie'));
+check('API unknown endpoint is 404 JSON', ($x = $api('/api/v1/nope', $token))['status'] === 404 && str_contains($x['headers'], 'application/json'));
+$docs = $a->get('/portal/api-docs');
+check('API docs page renders for a business user', $docs['status'] === 200 && str_contains($docs['body'], 'Reading many companies') && str_contains($docs['body'], 'next_cursor'));
+$r = $api('/api/v1/entities?limit=5', $token);
+$j = json_decode($r['body'], true);
+check('entities: a page of 5 with cursor and full record shape', $r['status'] === 200 && count($j['data'] ?? []) === 5 && ($j['has_more'] ?? false) === true && !empty($j['next_cursor'])
+    && array_key_exists('registered_agent', $j['data'][0]) && array_key_exists('people', $j['data'][0]) && isset($j['data'][0]['source']['pulled_at']), $r['body']);
+$seen = array_column($j['data'], 'id');
+$cursor = $j['next_cursor'];
+$pages = 1;
+while ($cursor && $pages < 50) {
+    $jj = json_decode($api('/api/v1/entities?limit=1000&cursor=' . $cursor, $token)['body'], true);
+    $seen = array_merge($seen, array_column($jj['data'], 'id'));
+    $cursor = $jj['next_cursor'];
+    $pages++;
+}
+check('entities: cursor paging walks every company once, newest id first', count($seen) === count(array_unique($seen)) && $seen[0] > $seen[1] && $seen === array_values(array_unique($seen))
+    && count($seen) === (int) $pdo->query('SELECT COUNT(*) FROM entities')->fetchColumn(), (string) count($seen));
+check('entities: limit up to 1000 is allowed, above is 400', count(json_decode($api('/api/v1/entities?limit=1000', $token)['body'], true)['data']) === 1000 && $api('/api/v1/entities?limit=1001', $token)['status'] === 400);
+check('entities: bad cursor, state, date and order are 400', $api('/api/v1/entities?cursor=%21%21', $token)['status'] === 400 && $api('/api/v1/entities?state=Florida', $token)['status'] === 400
+    && $api('/api/v1/entities?filed_after=2026-13-40', $token)['status'] === 400 && $api('/api/v1/entities?order=sideways', $token)['status'] === 400);
+$asc = json_decode($api('/api/v1/entities?order=asc&limit=3', $token)['body'], true)['data'];
+check('entities: order=asc returns the lowest ids first', $asc[0]['id'] < $asc[1]['id'] && $asc[1]['id'] < $asc[2]['id']);
+$fl = json_decode($api('/api/v1/entities?state=fl&limit=50', $token)['body'], true)['data'];
+check('entities: state filter', $fl && count(array_unique(array_column($fl, 'state'))) === 1 && $fl[0]['state'] === 'FL');
+$one = $fl[0];
+$d = json_decode($api('/api/v1/entities/' . $one['id'], $token)['body'], true)['data'] ?? [];
+check('entity by id includes filings', ($d['id'] ?? 0) === $one['id'] && array_key_exists('filings', $d));
+$d2 = json_decode($api('/api/v1/entities/FL/' . $one['filing_number'], $token)['body'], true)['data'] ?? [];
+check('entity by state and filing number', ($d2['filing_number'] ?? '') === $one['filing_number']);
+check('entity not found is 404 JSON', $api('/api/v1/entities/999999999', $token)['status'] === 404);
+check('entities: POST is 405', $a->req('POST', '/api/v1/entities', [], ["Authorization: Bearer $token"])['status'] === 405);
+check('entities: no key is 401', $api('/api/v1/entities')['status'] === 401);
+check('a key use is recorded', $pdo->query("SELECT COUNT(*) FROM api_key WHERE last_used_at IS NOT NULL")->fetchColumn() == 1);
+$r = $api('/api/v1/me', $token);
+check('API responses carry rate-limit and quota headers', str_contains($r['headers'], 'X-RateLimit-Limit: 120') && str_contains($r['headers'], 'X-Quota-Limit: 25000') && str_contains($r['headers'], 'X-Quota-Remaining:'));
+check('API calls are counted for the month', (int) $pdo->query("SELECT calls FROM api_usage WHERE bucket = 'm:" . gmdate('Y-m') . "'")->fetchColumn() >= 3);
+$uid = (int) $pdo->query("SELECT id FROM `user` WHERE email = 'pro@example.com'")->fetchColumn();
+$pdo->exec("INSERT INTO api_usage (user_id, bucket, calls) VALUES ($uid, 'n:" . gmdate('Y-m-d\\TH:i') . "', 100000) ON DUPLICATE KEY UPDATE calls = 100000");
+$r = $api('/api/v1/me', $token);
+check('over the per-minute limit is 429 with Retry-After', $r['status'] === 429 && str_contains($r['headers'], 'Retry-After:') && str_contains($r['body'], 'Rate limit'), $r['status'] . ' ' . $r['body']);
+$pdo->exec("DELETE FROM api_usage WHERE bucket LIKE 'n:%'");
+$pdo->exec("UPDATE api_usage SET calls = 25000 WHERE bucket = 'm:" . gmdate('Y-m') . "'");
+$r = $api('/api/v1/me', $token);
+check('over the monthly quota is 429 with a reset date', $r['status'] === 429 && str_contains($r['body'], 'Monthly API quota') && str_contains($r['headers'], 'X-Quota-Remaining: 0'), $r['status'] . ' ' . $r['body']);
+check('the usage card shows on the keys page', str_contains($a->get('/portal/api-keys')['body'], '25,000 of 25,000 calls used'));
+$pdo->exec("DELETE FROM api_usage");
+$pdo->exec("INSERT INTO api_usage (user_id, bucket, calls) VALUES ($uid, 'r:" . gmdate('Y-m') . "', 49998)");
+$r = $api('/api/v1/entities?limit=100', $token);
+$j = json_decode($r['body'], true);
+check('a list is cut short at the remaining row quota', $r['status'] === 200 && count($j['data']) === 2 && $j['has_more'] === true && str_contains($r['headers'], 'X-Rows-Remaining: 0'), $r['status'] . ' ' . substr($r['body'], 0, 200));
+$r = $api('/api/v1/entities', $token);
+check('with no rows left the next call is 429 with a reset date', $r['status'] === 429 && str_contains($r['body'], 'Monthly row quota'), $r['status'] . ' ' . $r['body']);
+$pdo->exec("DELETE FROM api_usage");
+$pdo->exec("UPDATE `user` SET plan = 'pro' WHERE email = 'pro@example.com'");
+check('API key of a downgraded plan is 403', $api('/api/v1/me', $token)['status'] === 403);
+$pdo->exec("UPDATE `user` SET plan = 'business' WHERE email = 'pro@example.com'");
+$keyId = $pdo->query("SELECT id FROM api_key LIMIT 1")->fetchColumn();
+$a->postForm('/portal/api-keys/revoke', ['id' => $keyId], '/portal/api-keys');
+check('a revoked key is rejected', $api('/api/v1/me', $token)['status'] === 401);
+$pdo->exec("UPDATE `user` SET plan = 'pro' WHERE email = 'pro@example.com'");
+proc_terminate($srvA);
+
+
 echo "\n" . ($checks - $failures) . "/$checks checks passed" . ($failures ? ", $failures FAILED" : '') . ".\n";
 exit($failures ? 1 : 0);
