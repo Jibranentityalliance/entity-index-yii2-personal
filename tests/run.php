@@ -605,6 +605,38 @@ $keyId = $pdo->query("SELECT id FROM api_key LIMIT 1")->fetchColumn();
 $a->postForm('/portal/api-keys/revoke', ['id' => $keyId], '/portal/api-keys');
 check('a revoked key is rejected', $api('/api/v1/me', $token)['status'] === 401);
 $pdo->exec("UPDATE `user` SET plan = 'pro' WHERE email = 'pro@example.com'");
+
+echo "CSV export\n";
+$exportCap = 5000;
+$xb = "x:" . gmdate('Y-m');
+$flCount = (int) $pdo->query("SELECT COUNT(*) FROM entities WHERE state = 'FL'")->fetchColumn();
+$page = $a->get('/portal/companies?state=FL')['body'];
+check('pro: the Companies page has an Export CSV button, a confirmation modal and the usage card', str_contains($page, 'Export CSV') && str_contains($page, 'id="export-modal"') && str_contains($page, 'CSV export this month') && str_contains($page, 'rows will be exported'));
+check('export needs POST', $a->get('/portal/export/companies')['status'] === 405);
+$r = $a->postForm('/portal/export/companies', ['state' => 'FL'], '/portal/companies?state=FL');
+$rows = [];
+if ($fh = fopen('php://memory', 'w+')) {
+    fwrite($fh, preg_replace('/^\xEF\xBB\xBF/', '', $r['body']));
+    rewind($fh);
+    while (($row = fgetcsv($fh, 0, ',', '"', '')) !== false) {
+        $rows[] = $row;
+    }
+}
+check('pro: export downloads a CSV of the filtered companies', $r['status'] === 200 && str_contains($r['headers'], 'text/csv') && str_contains($r['headers'], 'attachment')
+    && ($rows[0][0] ?? '') === 'Company' && count($rows) - 1 === min($flCount, $exportCap) && !array_diff(array_column(array_slice($rows, 1), 1), ['FL']), $r['status'] . ' rows=' . count($rows));
+check('the exported rows are counted against the month', (int) $pdo->query("SELECT calls FROM api_usage WHERE user_id = $uid AND bucket = '$xb'")->fetchColumn() === count($rows) - 1);
+$pdo->exec("DELETE FROM api_usage");
+$pdo->exec("INSERT INTO api_usage (user_id, bucket, calls) VALUES ($uid, '$xb', " . ($exportCap - 3) . ")");
+$r = $a->postForm('/portal/export/companies', ['state' => 'FL'], '/portal/companies?state=FL');
+check('a file is cut short at the remaining monthly rows', $r['status'] === 200 && substr_count(trim($r['body']), "\n") === 3, $r['status'] . ' ' . substr_count(trim($r['body']), "\n"));
+$r = $a->postForm('/portal/export/companies', ['state' => 'FL'], '/portal/companies?state=FL');
+check('with no rows left the export is refused', $r['status'] === 302 && !str_contains($r['headers'], 'text/csv'));
+check('the Companies page shows the export usage card, full', str_contains($a->get('/portal/companies?state=FL')['body'], '5,000 of 5,000 export rows used') && str_contains($a->get('/portal/companies?state=FL')['body'], 'used up until'));
+$pdo->exec("DELETE FROM api_usage");
+$pdo->exec("UPDATE `user` SET plan = 'free' WHERE email = 'pro@example.com'");
+check('free: the button is locked', str_contains($a->get('/portal/companies')['body'], 'Export CSV is a Pro feature'));
+check('free: export is forbidden', $a->postForm('/portal/export/companies', ['state' => 'FL'], '/portal/companies')['status'] === 403);
+$pdo->exec("UPDATE `user` SET plan = 'pro' WHERE email = 'pro@example.com'");
 proc_terminate($srvA);
 
 

@@ -95,6 +95,12 @@ class User extends ActiveRecord implements IdentityInterface
         return $this->isAdmin() || in_array($this->plan, ['business', 'bulk'], true);
     }
 
+    public function hasExportAccess(): bool
+    {
+        $limits = Yii::$app->params['exportLimits'] ?? [];
+        return $this->isAdmin() || isset($limits[$this->plan]);
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === self::ROLE_ADMIN;

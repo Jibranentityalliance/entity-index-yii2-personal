@@ -45,7 +45,13 @@ The portal UI uses stock AdminLTE 3 / Bootstrap 4 components (info-box, card, ca
 
 `php yii seed/admin you@example.com 'password'` creates an admin. Paid plans are set on the `user.plan` column (`free|pro|business|bulk`) until billing exists.
 API keys and the read-only REST API are documented in the **API** section below.
-Not built yet: saved searches, CSV export, billing (Stripe is a placeholder), usage limits, admin queues for contact / opt-out / waitlist.
+Not built yet: saved searches, billing (Stripe is a placeholder), usage limits, admin queues for contact / opt-out / waitlist.
+
+## CSV export
+
+Paid plans and admins get an **Export CSV** button on `/portal/companies`; it downloads the current filters (keywords, state, type, filing dates) as a UTF-8 CSV, newest filing first, with officers, registered agent, addresses and phones. Free accounts see a locked button. The Companies page shows a "CSV export this month" usage card with a progress bar, and the button opens a confirmation dialog listing the filters and the number of rows; after the file downloads the page reloads so the usage card is current. The download is a POST (`/portal/export/companies`, CSRF-protected) because it uses up quota. Cells that start with `=`, `+`, `-` or `@` are prefixed with a quote so spreadsheets do not run them as formulas.
+
+**Export limits are not final and are meant to be changed.** They live in `config/params.php` under `exportLimits`, per plan (`pro`, `business`, `bulk`, `admin`): `monthlyRows` (rows exported a calendar month, UTC, counted separately from the API row cap; `null` is unlimited) and `perFile` (most rows in one download). A plan missing from the list cannot export. Current placeholders: Pro 5,000 rows a month, Business 50,000, Data license 1,000,000, admins unlimited, with files capped at the monthly amount (100,000 for Data license and admins). The pricing page text for Pro and Business reads these numbers. A file is cut short when fewer rows are left than it would contain, and the button is disabled once none are left. Usage is kept in `api_usage` under the `x:YYYY-MM` bucket.
 
 ## API (v1)
 

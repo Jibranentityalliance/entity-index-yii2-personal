@@ -19,4 +19,13 @@ abstract class PortalController extends Controller
             'verbs' => ['class' => VerbFilter::class, 'actions' => ['logout' => ['post']]],
         ];
     }
+
+    protected function companyFilters(array $source): array
+    {
+        $one = fn(string $k) => isset($source[$k]) && !is_array($source[$k]) && trim($source[$k]) !== '' ? trim($source[$k]) : null;
+        return [
+            'q' => $one('q'), 'state' => $one('state'), 'type' => $one('type'), 'status' => $one('status'),
+            'county' => $one('county'), 'from' => $one('from'), 'to' => $one('to'),
+        ];
+    }
 }

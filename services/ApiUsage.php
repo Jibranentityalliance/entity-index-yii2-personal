@@ -79,7 +79,7 @@ class ApiUsage
             ->where(['user_id' => $userId, 'bucket' => 'r:' . gmdate('Y-m', $now)])->scalar();
     }
 
-    private static function bump(int $userId, string $bucket, int $by = 1): int
+    public static function bump(int $userId, string $bucket, int $by = 1): int
     {
         $db = Yii::$app->db;
         $db->createCommand(
@@ -94,7 +94,7 @@ class ApiUsage
         Yii::$app->db->createCommand()->delete('api_usage', ['and', ['like', 'bucket', 'n:%', false], ['<', 'bucket', 'n:' . gmdate('Y-m-d\TH:i', $now - 7200)]])->execute();
     }
 
-    private static function monthResetAt(int $now): int
+    public static function monthResetAt(int $now): int
     {
         return (new \DateTimeImmutable('@' . $now))->modify('first day of next month')->setTime(0, 0)->getTimestamp();
     }

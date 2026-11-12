@@ -1,5 +1,12 @@
 <?php
 
+$exportLimits = [
+    'pro' => ['monthlyRows' => 5000, 'perFile' => 5000],
+    'business' => ['monthlyRows' => 50000, 'perFile' => 50000],
+    'bulk' => ['monthlyRows' => 1000000, 'perFile' => 100000],
+    'admin' => ['monthlyRows' => null, 'perFile' => 100000],
+];
+
 return [
     'adminEmail' => env('ADMIN_EMAIL', 'admin@localhost'),
     'senderEmail' => env('ADMIN_EMAIL', 'admin@localhost'),
@@ -25,6 +32,12 @@ return [
         'bulk' => ['monthlyCalls' => 500000, 'monthlyRows' => 5000000, 'perMinute' => 600],
     ],
 
+    // CSV export limits per plan (the Companies page "Export CSV" button). Not final: change the numbers here and nothing else.
+    //   monthlyRows   rows exported per calendar month (UTC), counted separately from the API row cap; null is unlimited
+    //   perFile       most rows in a single download
+    // Free accounts cannot export. The pricing text below, the Companies page and the tests read these values.
+    'exportLimits' => $exportLimits,
+
     // Proposed prices — change here; the pricing page and home page read from this list.
     'tiers' => [
         [
@@ -34,12 +47,12 @@ return [
         ],
         [
             'id' => 'pro', 'name' => 'Pro', 'price' => '$49', 'per' => '/mo', 'for' => 'Agents, accountants, small sales teams', 'featured' => true,
-            'features' => ['Full records incl. officers + addresses', 'Unlimited search, all history', 'Saved-search email alerts every morning', 'CSV export up to 5,000 rows/month'],
+            'features' => ['Full records incl. officers + addresses', 'Unlimited search, all history', 'Saved-search email alerts every morning', 'CSV export up to ' . number_format($exportLimits['pro']['monthlyRows']) . ' rows/month'],
             'cta' => 'Join the waitlist', 'url' => ['/pricing/index', 'plan' => 'pro', '#' => 'waitlist'],
         ],
         [
             'id' => 'business', 'name' => 'Business / API', 'price' => '$299', 'per' => '/mo', 'for' => 'Agencies, SaaS, lenders',
-            'features' => ['REST API — 25,000 calls/month', 'Webhooks for new filings', '50,000 export rows/month', 'All historical data', 'Self-serve API key in 2 minutes'],
+            'features' => ['REST API — 25,000 calls/month', 'Webhooks for new filings', number_format($exportLimits['business']['monthlyRows']) . ' export rows/month', 'All historical data', 'Self-serve API key in 2 minutes'],
             'cta' => 'Join the waitlist', 'url' => ['/pricing/index', 'plan' => 'business', '#' => 'waitlist'],
         ],
         [
