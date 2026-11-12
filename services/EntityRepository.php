@@ -24,7 +24,7 @@ class EntityRepository
     private const CACHE_TTL = 300;
 
     /**
-     * @param array{q?:?string,state?:?string,type?:?string,status?:?string,county?:?string,from?:?string,to?:?string,page?:int,pageSize?:int} $p
+     * @param array{q?:?string,state?:?string,type?:?string,status?:?string,county?:?string,from?:?string,to?:?string,basic?:bool,page?:int,pageSize?:int} $p
      * @return array{total:int,page:int,pageSize:int,items:array[]}
      */
     public static function search(array $p): array
@@ -71,9 +71,11 @@ class EntityRepository
         if ($terms) {
             $key = preg_replace('/[^a-z0-9]/', '', strtolower($p['q']));
             $nameMatch = self::termsCondition('e.name', $terms, 'n');
-            $personMatch = new Expression('EXISTS (SELECT 1 FROM people pe WHERE pe.entity_id = e.id AND ' . self::termsSql('pe.name', $terms, 'p', $params1) . ')', $params1);
             $agentMatch = new Expression('EXISTS (SELECT 1 FROM registered_agents ra WHERE ra.id = e.registered_agent_id AND ' . self::termsSql('ra.name', $terms, 'a', $params2) . ')', $params2);
-            $conds = ['or', $nameMatch, $personMatch, $agentMatch];
+            $conds = ['or', $nameMatch, $agentMatch];
+            if (empty($p['basic'])) {
+                $conds[] = new Expression('EXISTS (SELECT 1 FROM people pe WHERE pe.entity_id = e.id AND ' . self::termsSql('pe.name', $terms, 'p', $params1) . ')', $params1);
+            }
             if (strlen($key) >= 5) {
                 $conds[] = ['e.url_key' => $key];
             }

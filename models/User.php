@@ -90,6 +90,11 @@ class User extends ActiveRecord implements IdentityInterface
         return $this->isAdmin() || in_array($this->plan, ['pro', 'business', 'bulk'], true);
     }
 
+    public function isFree(): bool
+    {
+        return !$this->hasFullAccess();
+    }
+
     public function hasApiAccess(): bool
     {
         return $this->isAdmin() || in_array($this->plan, ['business', 'bulk'], true);

@@ -4,6 +4,7 @@
 /** @var array $params */
 /** @var array $res */
 /** @var array|null $export */
+/** @var array|null $free */
 
 use app\helpers\Fmt;
 use app\helpers\States;
@@ -39,7 +40,7 @@ $hrefFor = function (int $p) use ($params): string {
         <div class="form-row align-items-center">
             <div class="col-lg">
                 <label for="s-q" class="sr-only">Keywords</label>
-                <input id="s-q" class="form-control" name="q" type="search" value="<?= Html::encode($q) ?>" placeholder="Name, officer, agent or filing number">
+                <input id="s-q" class="form-control" name="q" type="search" value="<?= Html::encode($q) ?>" placeholder="<?= $free !== null ? 'Name, agent or filing number' : 'Name, officer, agent or filing number' ?>">
             </div>
             <div class="col-sm-6 col-lg-2">
                 <label for="s-state" class="sr-only">State</label>
@@ -64,6 +65,24 @@ $hrefFor = function (int $p) use ($params): string {
         </div>
     </form>
 </div>
+
+<?php if ($free !== null): ?>
+<div class="card" id="free-usage">
+    <div class="card-header">
+        <h3 class="card-title">Free plan</h3>
+        <div class="card-tools"><a href="<?= Url::to(['/pricing/index', 'plan' => 'pro']) ?>" class="btn btn-sm btn-primary">Upgrade to Pro</a></div>
+    </div>
+    <div class="card-body">
+        <?php $ratio = $free['lookupsPerDay'] > 0 ? $free['used'] / $free['lookupsPerDay'] : 1; $pct = min(100, (int) round($ratio * 100)); $tone = $ratio >= 0.8 ? 'bg-danger' : ($ratio >= 0.5 ? 'bg-warning' : 'bg-success'); ?>
+        <p class="mb-2"><strong><?= Fmt::num($free['used']) ?></strong> of <?= Fmt::num($free['lookupsPerDay']) ?> company lookups used today.</p>
+        <div class="progress rounded-pill mb-3"><div class="progress-bar rounded-pill <?= $tone ?>" role="progressbar" style="width: <?= $pct ?>%" aria-valuenow="<?= $pct ?>" aria-valuemin="0" aria-valuemax="100"></div></div>
+        <p class="text-muted mb-0">
+            Search covers every filing. Company details open for filings from the last <?= (int) $free['historyDays'] ?> days<?= $free['floor'] ? ' (' . Fmt::dayShort($free['floor']) . ' to ' . Fmt::dayShort($free['ceiling']) . ')' : '' ?>; older ones are Pro.
+            Opening a company page is a lookup; reopening the same company today is free. Resets at midnight New York time.
+        </p>
+    </div>
+</div>
+<?php endif ?>
 
 <?php if ($export !== null): ?>
 <div class="card" id="export-usage">
@@ -99,7 +118,7 @@ $hrefFor = function (int $p) use ($params): string {
         </div>
     </div>
     <div class="card-body p-0">
-        <?= $this->render('/_partials/entity-table', ['items' => $res['items'], 'empty' => 'No companies match those filters. Try fewer keywords or a wider date range.']) ?>
+        <?= $this->render('/_partials/entity-table', ['items' => $res['items'], 'showCounty' => $free === null, 'lockBefore' => $free['floor'] ?? null, 'empty' => 'No companies match those filters. Try fewer keywords or a wider date range.']) ?>
     </div>
     <?= $this->render('/_partials/pager', ['page' => $res['page'], 'pageSize' => $res['pageSize'], 'total' => $res['total'], 'hrefFor' => $hrefFor]) ?>
 </div>

@@ -45,7 +45,15 @@ The portal UI uses stock AdminLTE 3 / Bootstrap 4 components (info-box, card, ca
 
 `php yii seed/admin you@example.com 'password'` creates an admin. Paid plans are set on the `user.plan` column (`free|pro|business|bulk`) until billing exists.
 API keys and the read-only REST API are documented in the **API** section below.
-Not built yet: saved searches, billing (Stripe is a placeholder), usage limits, admin queues for contact / opt-out / waitlist.
+Not built yet: saved searches, billing (Stripe is a placeholder), admin queues for contact / opt-out / waitlist.
+
+## Free plan limits
+
+Free accounts are limited in `config/params.php` under `freeLimits`; **the numbers are not final, change them there and nothing else**: `historyDays` (7) and `lookupsPerDay` (10). Paid plans and admins have neither limit. The pricing page text reads these values.
+
+- **Search everything, open the last 7 days.** Search, filters and the States page cover every filing, so free users can see what exists. Company pages only open for filings from the last `historyDays` days, counted back from the latest filing day (the same window the dashboard uses); older companies show a lock icon in the list and a locked page with an upgrade prompt. Free keyword search matches company names, registered agents and filing numbers, not officer names.
+- **Company pages.** Free accounts see name, state, type, filing date, status and the registered agent (name and address; the phone is locked). Filing number, effective date, industry, county, source link, officers, addresses and phones need a paid plan.
+- **Lookups.** Opening a company page is a lookup. Free accounts get `lookupsPerDay` different companies per New York calendar day (`reportTz`); reopening one already opened that day is free, and at the limit new companies return 429 with an upgrade prompt. Lookups are stored in `company_lookup` (user, day, company).
 
 ## CSV export
 

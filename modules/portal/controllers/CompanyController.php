@@ -5,6 +5,8 @@ namespace app\modules\portal\controllers;
 use app\helpers\Fmt;
 use app\helpers\States;
 use app\services\EntityRepository;
+use app\services\FreePlan;
+use Yii;
 use yii\web\NotFoundHttpException;
 
 class CompanyController extends PortalController
@@ -22,9 +24,26 @@ class CompanyController extends PortalController
         if ($state !== strtolower($st['code']) || $slug !== $e->slug . '-' . $e->url_key) {
             return $this->redirect(Fmt::entityUrl($e->attributes), 308);
         }
+        $user = Yii::$app->user->identity;
+        $free = FreePlan::summary($user);
+        if ($free !== null) {
+            if (!FreePlan::inHistory($user, $e->filed_at)) {
+                return $this->restricted('history', $free, 403);
+            }
+            if (!FreePlan::lookup($user, (int) $e->id)) {
+                return $this->restricted('lookups', $free, 429);
+            }
+            $free = FreePlan::summary($user);
+        }
         return $this->render('view', [
             'e' => $e, 'st' => $st, 'related' => EntityRepository::related($e, 8),
-            'full' => \Yii::$app->user->identity->hasFullAccess(),
+            'full' => $free === null, 'free' => $free,
         ]);
+    }
+
+    private function restricted(string $reason, array $free, int $status)
+    {
+        Yii::$app->response->statusCode = $status;
+        return $this->render('restricted', ['reason' => $reason, 'free' => $free]);
     }
 }

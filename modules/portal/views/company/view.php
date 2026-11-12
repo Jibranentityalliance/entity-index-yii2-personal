@@ -4,14 +4,15 @@
 /** @var app\models\Entity $e */
 /** @var array $st */
 /** @var array[] $related */
-/** @var bool $full  paid plan or admin: registered agent, officers, addresses and phones */
+/** @var bool $full  paid plan or admin: every field, officers, addresses and phones */
+/** @var array|null $free free plan summary (lookups used today), null on paid plans */
 
 use app\helpers\Fmt;
 use yii\helpers\Html;
 use yii\helpers\Url;
 
 $row = $e->attributes;
-$where = Fmt::cityState($e->principal_address);
+$where = $full ? Fmt::cityState($e->principal_address) : null;
 $agents = array_values(array_filter($e->people, fn($p) => $p->role === 'agent'));
 $people = array_values(array_filter($e->people, fn($p) => $p->role !== 'agent'));
 $legacyAgent = $e->agent; // sample/seeded data keeps the agent in registered_agents
@@ -29,6 +30,7 @@ $phone = function (?string $v): string {
     return '<span class="ei-phone">' . Html::encode(Fmt::phoneMasked($v)) . '</span> '
         . '<button type="button" class="btn btn-link btn-sm p-0 ml-1 js-reveal" data-phone="' . Html::encode(Fmt::phone($v)) . '">Show</button>';
 };
+$phoneLocked = '<span class="text-muted"><i class="fas fa-lock"></i> Pro</span>';
 $this->registerCss('.ei-blur{display:inline-block;height:11px;border-radius:6px;background:var(--ei-border-input);filter:blur(1.5px);vertical-align:middle}'
     . '.ei-locked span{display:block;height:12px;border-radius:6px;background:var(--ei-border-input);filter:blur(1.5px);margin-bottom:10px}.ei-phone{font-variant-numeric:tabular-nums}');
 $this->registerJs(<<<'JS'
@@ -50,9 +52,12 @@ JS);
     <?php if ($e->status !== ''): ?><?= Fmt::statusBadgeBs4($e->status) ?><?php endif ?>
     <span class="text-muted ml-2"><?= Html::encode($st['name']) ?> · <?= $na($e->entity_type) ?><?= $where ? ' · ' . Html::encode($where) : '' ?> · Filed <?= $e->filed_at ? Fmt::date($e->filed_at) : 'N/A' ?></span>
     <?php if ($hasState): ?><a class="ml-3" href="<?= Fmt::stateUrl($st['code']) ?>">All <?= Html::encode($st['name']) ?> companies</a><?php endif ?>
-    <?php if ($e->county): ?> · <a href="<?= Url::to(['/portal/companies/index', 'state' => $st['code'], 'county' => $e->county]) ?>"><?= Html::encode($e->county) ?> County</a><?php endif ?>
+    <?php if ($full && $e->county): ?> · <a href="<?= Url::to(['/portal/companies/index', 'state' => $st['code'], 'county' => $e->county]) ?>"><?= Html::encode($e->county) ?> County</a><?php endif ?>
 </div>
 
+<?php if ($free !== null): ?>
+    <p class="text-muted small mb-3">Lookup <?= (int) $free['used'] ?> of <?= (int) $free['lookupsPerDay'] ?> today. Reopening this company today does not use another.</p>
+<?php endif ?>
 <div class="row">
     <div class="col-lg-8">
         <div class="card">
@@ -63,39 +68,36 @@ JS);
                     <dt class="col-sm-4 text-muted font-weight-normal">State</dt><dd class="col-sm-8"><?php if ($hasState): ?><a href="<?= Fmt::stateUrl($st['code']) ?>"><?= Html::encode($st['name']) ?></a><?php else: ?>N/A<?php endif ?></dd>
                     <dt class="col-sm-4 text-muted font-weight-normal">Entity type</dt><dd class="col-sm-8"><?= $na($e->entity_type) ?></dd>
                     <dt class="col-sm-4 text-muted font-weight-normal">Status</dt><dd class="col-sm-8"><?= $na($e->status) ?></dd>
+                    <?php if ($full): ?>
                     <dt class="col-sm-4 text-muted font-weight-normal">Filing number</dt><dd class="col-sm-8 text-monospace"><?= $na($e->state_filing_number) ?></dd>
+                    <?php endif ?>
                     <dt class="col-sm-4 text-muted font-weight-normal">Filed with the state</dt><dd class="col-sm-8"><?= $e->filed_at ? Fmt::date($e->filed_at) : 'N/A' ?></dd>
+                    <?php if ($full): ?>
                     <dt class="col-sm-4 text-muted font-weight-normal">Effective date</dt><dd class="col-sm-8"><?= $e->formation_date ? Fmt::date($e->formation_date) : 'N/A' ?></dd>
                     <dt class="col-sm-4 text-muted font-weight-normal">Added to EntityIndex</dt><dd class="col-sm-8"><?= Fmt::dateTime($e->indexed_at) ?></dd>
-                    <?php if ($e->naics_label): ?>
+                    <?php endif ?>
+                    <?php if ($full && $e->naics_label): ?>
                         <dt class="col-sm-4 text-muted font-weight-normal">Likely industry</dt><dd class="col-sm-8"><?= Html::encode($e->naics_label) ?> <span class="text-muted small">· NAICS <?= Html::encode($e->naics_guess) ?> (estimated)</span></dd>
                     <?php endif ?>
                 </dl>
+                <?php if ($full): ?>
                 <div class="card-footer text-muted small">
                     Source: <?= Html::encode($sourceName) ?>, filing #<?= $na($e->state_filing_number) ?>.
                     <?php if ($e->source_url): ?><a href="<?= Html::encode($e->source_url) ?>" rel="nofollow noopener" target="_blank">View official record ↗</a><?php endif ?>
                 </div>
+                <?php endif ?>
             </div>
         </div>
 
         <div class="card">
-            <div class="card-header"><h3 class="card-title">Registered agent</h3><?php if (!$full): ?><div class="card-tools"><span class="badge badge-warning">Pro</span></div><?php endif ?></div>
-            <?php if (!$full): ?>
-                <div class="card-body">
-                    <div class="ei-locked"><span></span><span class="w-50"></span></div>
-                    <div class="callout callout-warning mb-0 mt-3">
-                        <h5 class="h6"><i class="fas fa-lock"></i> Registered agent details are a Pro feature</h5>
-                        <p class="mb-2 small">See who represents this business, with full address and phone number.</p>
-                        <a href="<?= $upgradeUrl ?>" class="btn btn-primary btn-sm text-white text-decoration-none">Upgrade to Pro</a>
-                    </div>
-                </div>
-            <?php elseif ($agents): ?>
+            <div class="card-header"><h3 class="card-title">Registered agent</h3></div>
+            <?php if ($agents): ?>
                 <div class="table-responsive">
                     <table class="table mb-0">
                         <thead><tr><th>Name</th><th>Address</th><th>Phone</th></tr></thead>
                         <tbody>
                         <?php foreach ($agents as $a): ?>
-                            <tr><td class="font-weight-bold"><?= $na($a->name) ?></td><td><?= $na($a->address) ?></td><td class="text-nowrap"><?= $phone($a->phone) ?></td></tr>
+                            <tr><td class="font-weight-bold"><?= $na($a->name) ?></td><td><?= $na($a->address) ?></td><td class="text-nowrap"><?= $full ? $phone($a->phone) : $phoneLocked ?></td></tr>
                         <?php endforeach ?>
                         </tbody>
                     </table>
@@ -105,7 +107,7 @@ JS);
                     <dl class="row mb-0 px-3 pt-3">
                         <dt class="col-sm-4 text-muted font-weight-normal">Name</dt><dd class="col-sm-8"><?= $na($legacyAgent->name) ?></dd>
                         <dt class="col-sm-4 text-muted font-weight-normal">Address</dt><dd class="col-sm-8"><?= $na($legacyAgent->address) ?></dd>
-                        <dt class="col-sm-4 text-muted font-weight-normal">Phone</dt><dd class="col-sm-8 text-muted">N/A</dd>
+                        <dt class="col-sm-4 text-muted font-weight-normal">Phone</dt><dd class="col-sm-8 text-muted"><?= $full ? 'N/A' : $phoneLocked ?></dd>
                     </dl>
                 </div>
             <?php else: ?>
@@ -159,7 +161,7 @@ JS);
             <div class="card">
                 <div class="card-body">
                     <h3 class="h6">Get the full record</h3>
-                    <p class="text-muted small">Pro shows the registered agent, officers, addresses and phone numbers for every company.</p>
+                    <p class="text-muted small">Pro shows officers, addresses, phone numbers and the full filing details for every company, with all history and no daily lookup limit.</p>
                     <a href="<?= $upgradeUrl ?>" class="btn btn-primary btn-block">Upgrade to Pro</a>
                 </div>
             </div>
@@ -176,6 +178,6 @@ JS);
 <?php if ($related): ?>
     <div class="card">
         <div class="card-header"><h3 class="card-title">Other new businesses<?= $e->county ? ' in ' . Html::encode($e->county) . ' County' : '' ?><?= $hasState ? ', ' . Html::encode($st['name']) : '' ?></h3></div>
-        <div class="card-body p-0"><?= $this->render('/_partials/entity-table', ['items' => $related, 'showState' => false]) ?></div>
+        <div class="card-body p-0"><?= $this->render('/_partials/entity-table', ['items' => $related, 'showState' => false, 'showCounty' => $full]) ?></div>
     </div>
 <?php endif ?>

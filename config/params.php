@@ -7,6 +7,8 @@ $exportLimits = [
     'admin' => ['monthlyRows' => null, 'perFile' => 100000],
 ];
 
+$freeLimits = ['historyDays' => 7, 'lookupsPerDay' => 10];
+
 return [
     'adminEmail' => env('ADMIN_EMAIL', 'admin@localhost'),
     'senderEmail' => env('ADMIN_EMAIL', 'admin@localhost'),
@@ -32,6 +34,12 @@ return [
         'bulk' => ['monthlyCalls' => 500000, 'monthlyRows' => 5000000, 'perMinute' => 600],
     ],
 
+    // Free plan limits. Not final: change the numbers here and nothing else.
+    //   historyDays    company pages only open for filings from the last N days, counted back from the latest filing day (search and filters cover everything)
+    //   lookupsPerDay  different company pages a free account can open a day (reportTz calendar day); reopening one the same day is free
+    // Paid plans and admins have neither limit. The pricing text below, the Companies page and the tests read these values.
+    'freeLimits' => $freeLimits,
+
     // CSV export limits per plan (the Companies page "Export CSV" button). Not final: change the numbers here and nothing else.
     //   monthlyRows   rows exported per calendar month (UTC), counted separately from the API row cap; null is unlimited
     //   perFile       most rows in a single download
@@ -42,7 +50,7 @@ return [
     'tiers' => [
         [
             'id' => 'free', 'name' => 'Free', 'price' => '$0', 'per' => '', 'for' => 'Anyone looking up a company',
-            'features' => ['Company pages: name, state, type, filing date, status, registered agent', 'Basic search', 'Last 7 days of new filings', '10 full lookups per day'],
+            'features' => ['Company pages: name, state, type, filing date, status, registered agent', 'Basic search', 'Last ' . $freeLimits['historyDays'] . ' days of new filings', $freeLimits['lookupsPerDay'] . ' full lookups per day'],
             'cta' => 'Create free account', 'url' => ['/portal/auth/register'],
         ],
         [

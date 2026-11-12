@@ -188,7 +188,8 @@ $r = $p->postForm('/portal/auth/register', ['RegisterForm' => ['name' => 'Test U
 check('register succeeds and redirects to the dashboard', $r['status'] === 302 && str_ends_with((string) $r['location'], '/portal'), $r['status'] . ' ' . $r['location']);
 $r = $p->get('/portal');
 check('dashboard shows for the new user', $r['status'] === 200 && str_contains($r['body'], 'Total companies') && !str_contains($r['body'], 'Your plan'));
-echo "Portal product pages (free plan)\n";
+$pdo->exec("UPDATE `user` SET plan = 'pro' WHERE email = 'user@example.com'");
+echo "Portal product pages\n";
 foreach (['/portal', '/portal/companies', '/portal/companies?state=FL', '/portal/states', '/portal/account'] as $path) {
     $r = $p->get($path);
     check("portal $path renders AdminLTE", $r['status'] === 200 && str_contains($r['body'], 'main-sidebar') && $hasMeta($r['body']) && $hasHeader($r), (string) $r['status']);
@@ -254,16 +255,12 @@ check('states: a date range replaces the 7-day column', str_contains($r['body'],
 check('states: bad dates are ignored', $p->get('/portal/states?from=nope&to=2026-13-45')['status'] === 200);
 $r = $p->get('/portal/company/ny/redline-creative-llc-7045435');
 check('company page renders for a logged-in user', $r['status'] === 200 && str_contains($r['body'], 'Company details'));
-check('free plan: registered agent is locked', !str_contains($r['body'], 'Statewide Filing Agents LLC') && str_contains($r['body'], 'Registered agent details are a Pro feature'));
 $q = $pdo->prepare("SELECT p.name FROM people p JOIN entities e ON e.id = p.entity_id WHERE e.url_key = '7045435' AND p.role <> 'agent' ORDER BY p.id LIMIT 1");
 $q->execute();
 $officer = (string) $q->fetchColumn();
-check('free plan: officers are locked', $officer !== '' && !str_contains($r['body'], $officer) && str_contains($r['body'], 'Upgrade to Pro'));
 $r = $p->get('/portal/company/new-york/old-name-7045435');
 check('old slug / full state name redirects (308)', $r['status'] === 308 && str_ends_with((string) $r['location'], '/portal/company/ny/redline-creative-llc-7045435'), $r['status'] . ' ' . $r['location']);
 check('unknown company is 404', $p->get('/portal/company/ny/nothing-0000000')['status'] === 404);
-$pdo->exec("UPDATE `user` SET plan = 'pro' WHERE email = 'user@example.com'");
-$r = $p->get('/portal/company/ny/redline-creative-llc-7045435');
 check('pro plan: officers, agent and addresses are visible', str_contains($r['body'], $officer) && str_contains($r['body'], 'Statewide Filing Agents LLC') && !str_contains($r['body'], 'Upgrade to Pro'));
 $pdo->exec("UPDATE `user` SET plan = 'free' WHERE email = 'user@example.com'");
 
@@ -516,7 +513,7 @@ check('pro: phones are masked with a reveal button', str_contains($page, '(305) 
 check('pro: missing values show N/A', str_contains($page, 'N/A'));
 $pdo->exec("UPDATE `user` SET plan = 'free' WHERE email = 'pro@example.com'");
 $page = $m->get('/portal/company/fl/phone-sample-llc-l26000300')['body'];
-check('free: no phone numbers or agent in the page at all', !str_contains($page, '555-0142') && !str_contains($page, '••42') && !str_contains($page, 'Ana Sample') && str_contains($page, 'Upgrade to Pro'));
+check('free: no phone numbers in the page at all', !str_contains($page, '555-0142') && !str_contains($page, '••42') && !str_contains($page, '555-0199') && str_contains($page, 'Upgrade to Pro'));
 $pdo->exec("UPDATE `user` SET plan = 'pro' WHERE email = 'pro@example.com'");
 proc_terminate($srvM);
 $pdo->exec('DROP TABLE manual_companies');
@@ -637,6 +634,49 @@ $pdo->exec("UPDATE `user` SET plan = 'free' WHERE email = 'pro@example.com'");
 check('free: the button is locked', str_contains($a->get('/portal/companies')['body'], 'Export CSV is a Pro feature'));
 check('free: export is forbidden', $a->postForm('/portal/export/companies', ['state' => 'FL'], '/portal/companies')['status'] === 403);
 $pdo->exec("UPDATE `user` SET plan = 'pro' WHERE email = 'pro@example.com'");
+
+echo "Free plan limits\n";
+run('php yii seed/user free@example.com Free-pass-1 free', $env, $root);
+$flimits = ['historyDays' => 7, 'lookupsPerDay' => 10];
+$pdo->exec("UPDATE entities SET filed_at = '2026-11-01 12:00:00' WHERE id IN (SELECT id FROM (SELECT id FROM entities WHERE state <> 'NA' ORDER BY id LIMIT 15) t)");
+$recent = $pdo->query("SELECT id, state, slug, url_key, state_filing_number FROM entities WHERE filed_at = '2026-11-01 12:00:00' ORDER BY id")->fetchAll(PDO::FETCH_ASSOC);
+$urlOf = fn(array $e) => '/portal/company/' . strtolower($e['state']) . '/' . $e['slug'] . '-' . $e['url_key'];
+$old = $pdo->query("SELECT state, slug, url_key FROM entities WHERE filed_at < '2026-10-26' AND state <> 'NA' ORDER BY id LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+$pdo->exec("UPDATE entities SET registered_agent_id = (SELECT id FROM registered_agents ORDER BY id LIMIT 1) WHERE id = " . (int) $recent[0]['id']);
+$agentName = (string) $pdo->query("SELECT name FROM registered_agents ORDER BY id LIMIT 1")->fetchColumn();
+run('php yii cache/flush-all', $env, $root);
+$f = new Http('http://127.0.0.1:18088');
+$f->postForm('/portal/auth/login', ['LoginForm' => ['email' => 'free@example.com', 'password' => 'Free-pass-1']]);
+$lookups = fn() => (int) $pdo->query("SELECT COUNT(*) FROM company_lookup cl JOIN `user` u ON u.id = cl.user_id WHERE u.email = 'free@example.com'")->fetchColumn();
+$r = $f->get('/portal/companies');
+$allCount = number_format((int) $pdo->query('SELECT COUNT(*) FROM entities')->fetchColumn());
+check('free: Companies searches every filing and shows the plan card', str_contains($r['body'], $allCount . ' companies') && str_contains($r['body'], 'Free plan') && str_contains($r['body'], '0 of ' . $flimits['lookupsPerDay'] . ' company lookups used today'));
+check('free: filings older than the window carry a lock icon in the list', str_contains($r['body'], 'Older than your plan covers'));
+check('free: Companies has no County column and an officer-free search hint', !str_contains($r['body'], '>County<') && str_contains($r['body'], 'Name, agent or filing number'));
+check('free: the date picker and filters are not limited to the window', !str_contains($r['body'], 'data-min') && str_contains($f->get('/portal/companies?from=2020-01-01&to=2026-12-31')['body'], $allCount . ' companies')
+    && str_contains($f->get('/portal/states?from=2020-01-01')['body'], 'Filed since Jan 1, 2020'));
+$r = $f->get($urlOf($recent[0]));
+check('free: a company in the window opens and shows the lookup counter', $r['status'] === 200 && str_contains($r['body'], 'Lookup 1 of ' . $flimits['lookupsPerDay'] . ' today'), (string) $r['status']);
+check('free: registered agent is visible, its phone is locked', str_contains($r['body'], htmlspecialchars($agentName, ENT_QUOTES)) && !str_contains($r['body'], 'Registered agent details are a Pro feature') && str_contains($r['body'], 'fa-lock'));
+check('free: filing number, effective date and source link are hidden', !str_contains($r['body'], 'Filing number') && !str_contains($r['body'], 'Effective date') && !str_contains($r['body'], 'View official record') && str_contains($r['body'], 'Filed with the state'));
+check('free: officers stay locked', str_contains($r['body'], 'Officers, addresses and phone numbers are a Pro feature'));
+$f->get($urlOf($recent[0]));
+check('free: reopening the same company does not use another lookup', $lookups() === 1, (string) $lookups());
+$r = $f->get($urlOf($old));
+check('free: a company older than the window is refused and not counted', $r['status'] === 403 && str_contains($r['body'], 'before the last 7 days') && $lookups() === 1, (string) $r['status']);
+for ($i = 1; $i < $flimits['lookupsPerDay']; $i++) {
+    $f->get($urlOf($recent[$i]));
+}
+check('free: ten different companies use ten lookups', $lookups() === $flimits['lookupsPerDay'], (string) $lookups());
+$r = $f->get($urlOf($recent[10]));
+check('free: the eleventh company is refused with 429', $r['status'] === 429 && str_contains($r['body'], 'used all 10 free lookups') && $lookups() === $flimits['lookupsPerDay'], (string) $r['status']);
+check('free: an already opened company still opens at the limit', $f->get($urlOf($recent[3]))['status'] === 200);
+check('free: the Companies card shows the limit reached', str_contains($f->get('/portal/companies')['body'], '10 of 10 company lookups used today'));
+$pricing = (new Http('http://127.0.0.1:18088'))->get('/pricing')['body'];
+check('pricing page reads the free limits from config', str_contains($pricing, 'Last 7 days of new filings') && str_contains($pricing, '10 full lookups per day'));
+$pdo->exec("UPDATE `user` SET plan = 'pro' WHERE email = 'free@example.com'");
+check('pro: no window and no lookup limit', $f->get($urlOf($old))['status'] === 200 && !str_contains($f->get('/portal/companies')['body'], 'company lookups used today'));
+$pdo->exec("UPDATE `user` SET plan = 'free' WHERE email = 'free@example.com'");
 proc_terminate($srvA);
 
 
