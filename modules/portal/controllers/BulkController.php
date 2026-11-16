@@ -27,7 +27,7 @@ class BulkController extends PortalController
         $catalog = new BulkCatalog(Yii::$app->db);
         $dates = $catalog->dates();
         $date = in_array($date, $dates, true) ? $date : ($dates[0] ?? null);
-        $cap = $user->isAdmin() ? null : Bulk::config()['downloadsPerDay'];
+        $cap = $this->cap($user);
         return $this->render('index', [
             'dates' => $dates,
             'date' => $date,
@@ -35,6 +35,11 @@ class BulkController extends PortalController
             'cap' => $cap,
             'usedToday' => $catalog->downloadsToday($user->id),
         ]);
+    }
+
+    private function cap(\app\models\User $user): ?int
+    {
+        return $user->isAdmin() ? null : (int) $user->withOverrides('bulk', Bulk::config())['downloadsPerDay'];
     }
 
     public function actionDownload(int $id)
@@ -47,7 +52,7 @@ class BulkController extends PortalController
         }
         $range = Yii::$app->request->headers->get('Range');
         $resumed = $range !== null && !str_starts_with($range, 'bytes=0-');
-        $cap = $user->isAdmin() ? null : Bulk::config()['downloadsPerDay'];
+        $cap = $this->cap($user);
         if (!$resumed && $cap !== null && $catalog->downloadsToday($user->id) >= (int) $cap) {
             Yii::$app->session->setFlash('error', 'You have reached today\'s limit of ' . number_format((int) $cap) . ' downloads. It resets at midnight UTC.');
             return $this->redirect(['index', 'date' => $file['build_date']]);

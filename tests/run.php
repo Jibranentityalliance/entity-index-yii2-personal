@@ -698,6 +698,47 @@ check('pricing page reads the free limits from config', str_contains($pricing, '
 $pdo->exec("UPDATE `user` SET plan = 'pro' WHERE email = 'free@example.com'");
 check('pro: no window and no lookup limit', $f->get($urlOf($old))['status'] === 200 && !str_contains($f->get('/portal/companies')['body'], 'company lookups used today'));
 $pdo->exec("UPDATE `user` SET plan = 'free' WHERE email = 'free@example.com'");
+echo "Admin users\n";
+$ad = new Http('http://127.0.0.1:18088');
+$ad->postForm('/portal/auth/login', ['LoginForm' => ['email' => 'admin@example.com', 'password' => 'Admin-pass-1']]);
+$freeId = (int) $pdo->query("SELECT id FROM `user` WHERE email = 'free@example.com'")->fetchColumn();
+$adminId = (int) $pdo->query("SELECT id FROM `user` WHERE email = 'admin@example.com'")->fetchColumn();
+$r = $ad->get('/admin/users');
+check('admin users: the list shows every account and the sidebar link', $r['status'] === 200 && str_contains($r['body'], 'free@example.com') && str_contains($r['body'], 'admin@example.com') && str_contains($r['body'], '/admin/users'));
+$r = $ad->get('/admin/users?q=free%40');
+check('admin users: search narrows the list', str_contains($r['body'], 'free@example.com') && !str_contains($r['body'], 'pro@example.com') && str_contains($ad->get('/admin/users')['body'], 'pro@example.com'));
+check('admin users: the plan filter works', !str_contains($ad->get('/admin/users?plan=bulk')['body'], 'free@example.com'));
+$cust = new Http('http://127.0.0.1:18088');
+$cust->postForm('/portal/auth/login', ['LoginForm' => ['email' => 'pro@example.com', 'password' => 'Pro-pass-1']]);
+check('admin users: a customer gets 403', $cust->get('/admin/users')['status'] === 403 && $cust->get("/admin/users/update?id=$freeId")['status'] === 403);
+$r = (new Http('http://127.0.0.1:18088'))->get('/admin/users');
+check('admin users: a guest is sent to sign in', $r['status'] === 302 && str_contains((string) $r['location'], '/portal/auth/login'));
+check('admin users: an unknown user is 404', $ad->get('/admin/users/update?id=999999')['status'] === 404);
+
+$save = fn(array $fields) => $ad->postForm("/admin/users/update?id=$freeId", ['UserForm' => $fields + ['name' => 'Free Tester', 'plan' => 'free', 'role' => 'customer', 'status' => '10']], "/admin/users/update?id=$freeId");
+$r = $save(['limits' => ['free' => ['lookupsPerDay' => '3']]]);
+check('admin users: saving custom limits redirects and stores them', $r['status'] === 302 && $pdo->query("SELECT limit_overrides FROM `user` WHERE id = $freeId")->fetchColumn() === '{"free":{"lookupsPerDay":3}}');
+$ad->postForm("/admin/users/reset-usage?id=$freeId", [], "/admin/users/update?id=$freeId");
+check('admin users: reset usage clears the lookups', $lookups() === 0);
+check('admin users: the custom lookup limit shows on the free account\'s own card', str_contains($f->get('/portal/companies')['body'], '<strong>0</strong> of 3 company lookups used today'));
+$r = $ad->get("/admin/users/update?id=$freeId");
+check('admin users: the form shows the saved override and the plan default', str_contains($r['body'], 'value="3"') && str_contains($r['body'], 'Plan default: 10') && str_contains($r['body'], 'Company lookups today'));
+$r = $save(['limits' => ['free' => ['lookupsPerDay' => 'abc']]]);
+check('admin users: a bad limit is rejected and nothing changes', $r['status'] === 200 && str_contains($r['body'], 'enter a whole number') && $pdo->query("SELECT limit_overrides FROM `user` WHERE id = $freeId")->fetchColumn() === '{"free":{"lookupsPerDay":3}}');
+$r = $save(['limits' => ['free' => ['lookupsPerDay' => '']]]);
+check('admin users: clearing a limit goes back to the plan default', $r['status'] === 302 && $pdo->query("SELECT limit_overrides FROM `user` WHERE id = $freeId")->fetchColumn() === null
+    && str_contains($f->get('/portal/companies')['body'], 'of 10 company lookups used today'));
+$r = $save(['plan' => 'pro', 'limits' => ['export' => ['monthlyRows' => 'unlimited', 'perFile' => '250']]]);
+$page = $ad->get("/admin/users/update?id=$freeId")['body'];
+check('admin users: changing the plan applies; unlimited export and a file cap are stored', $r['status'] === 302 && $pdo->query("SELECT plan FROM `user` WHERE id = $freeId")->fetchColumn() === 'pro'
+    && $pdo->query("SELECT limit_overrides FROM `user` WHERE id = $freeId")->fetchColumn() === '{"export":{"monthlyRows":null,"perFile":250}}' && str_contains($page, 'CSV export rows this month') && str_contains($page, 'Unlimited'));
+$r = $save(['status' => '0']);
+check('admin users: a disabled account is signed out and cannot sign in', $r['status'] === 302 && $f->get('/portal')['status'] === 302
+    && str_contains((new Http('http://127.0.0.1:18088'))->postForm('/portal/auth/login', ['LoginForm' => ['email' => 'free@example.com', 'password' => 'Free-pass-1']])['body'], 'Incorrect email or password'));
+$save(['status' => '10', 'plan' => 'free']);
+$pdo->exec("UPDATE `user` SET limit_overrides = NULL WHERE id = $freeId");
+$r = $ad->postForm("/admin/users/update?id=$adminId", ['UserForm' => ['name' => '', 'plan' => 'free', 'role' => 'customer', 'status' => '10']], "/admin/users/update?id=$adminId");
+check('admin users: an admin cannot demote or disable themselves', $r['status'] === 200 && str_contains($r['body'], 'cannot change your own role') && $pdo->query("SELECT CONCAT(role, '/', status) FROM `user` WHERE id = $adminId")->fetchColumn() === 'admin/10');
 proc_terminate($srvA);
 
 

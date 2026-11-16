@@ -10,7 +10,7 @@ class ApiUsage
 {
     public static function limitsFor(User $user): ?array
     {
-        return $user->isAdmin() ? null : (Yii::$app->params['apiLimits'][$user->plan] ?? null);
+        return $user->isAdmin() ? null : $user->withOverrides('api', Yii::$app->params['apiLimits'][$user->plan] ?? null);
     }
 
     public static function consume(User $user): array

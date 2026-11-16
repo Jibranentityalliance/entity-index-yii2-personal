@@ -16,6 +16,7 @@ use yii\web\IdentityInterface;
  * @property string $auth_key
  * @property string $role     customer | admin
  * @property string $plan     free | pro | business | bulk
+ * @property string|null $limit_overrides JSON: per-account limit numbers that replace the plan's defaults
  * @property int $status      10 active, 0 disabled
  * @property string|null $last_login_at
  * @property string $created_at
@@ -109,6 +110,20 @@ class User extends ActiveRecord implements IdentityInterface
     public function hasBulkAccess(): bool
     {
         return $this->isAdmin() || $this->plan === 'bulk';
+    }
+
+    public function limitOverrides(): array
+    {
+        $v = json_decode((string) $this->limit_overrides, true);
+        return is_array($v) ? $v : [];
+    }
+
+    public function withOverrides(string $group, ?array $base): ?array
+    {
+        if ($base === null) {
+            return null;
+        }
+        return array_intersect_key($this->limitOverrides()[$group] ?? [], $base) + $base;
     }
 
     public function isAdmin(): bool

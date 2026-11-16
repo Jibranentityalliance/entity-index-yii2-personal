@@ -10,7 +10,7 @@ class ExportUsage
 {
     public static function limitsFor(User $user): ?array
     {
-        return Yii::$app->params['exportLimits'][$user->isAdmin() ? 'admin' : $user->plan] ?? null;
+        return $user->withOverrides('export', Yii::$app->params['exportLimits'][$user->isAdmin() ? 'admin' : $user->plan] ?? null);
     }
 
     public static function used(User $user): int

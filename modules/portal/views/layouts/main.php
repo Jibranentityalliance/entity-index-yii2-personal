@@ -30,6 +30,7 @@ if (Yii::$app->user->identity?->hasBulkAccess()) {
 }
 if (Yii::$app->user->identity?->isAdmin()) {
     $nav[] = ['Database', 'fa-database', ['/admin/database/index'], 'admin/database'];
+    $nav[] = ['Users', 'fa-users', ['/admin/users/index'], 'admin/users'];
 }
 ?>
 <?php $this->beginPage() ?>

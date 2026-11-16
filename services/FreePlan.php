@@ -10,7 +10,7 @@ class FreePlan
 {
     public static function limitsFor(User $user): ?array
     {
-        return $user->isFree() ? (Yii::$app->params['freeLimits'] ?? null) : null;
+        return $user->isFree() ? $user->withOverrides('free', Yii::$app->params['freeLimits'] ?? null) : null;
     }
 
     public static function historyFloor(User $user): ?string
@@ -80,7 +80,7 @@ class FreePlan
         return new \DateTimeZone(Yii::$app->params['reportTz'] ?? 'UTC');
     }
 
-    private static function today(): string
+    public static function today(): string
     {
         return (new \DateTimeImmutable('now', self::tz()))->format('Y-m-d');
     }
