@@ -22,7 +22,9 @@ h1, h2, h3 { letter-spacing: -0.02em; }
 .site-footer { border-top: 1px solid var(--ei-line); padding: 40px 0 28px; margin-top: 64px; background: var(--ei-surface-2); }
 .site-footer h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ei-muted); margin-bottom: 10px; }
 .site-footer li { margin-bottom: 6px; }
-.site-footer a { text-decoration: none; }
+.site-footer a { color: var(--ei-muted); text-decoration: none; }
+.site-footer a:hover, .site-footer a:focus { color: var(--ei-ink); text-decoration: underline; }
+.site-footer a.logo, .site-footer a.logo:hover { color: var(--ei-ink); text-decoration: none; }
 .footer-states { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 28px; font-size: 13px; }
 
 /* hero + stats */
@@ -101,6 +103,12 @@ dl.facts dt { color: var(--ei-muted); font-weight: 500; }
 .faq details { border-bottom: 1px solid var(--ei-line); padding: 12px 0; }
 .faq summary { cursor: pointer; font-weight: 600; }
 .prose { max-width: 760px; }
+
+.error-page { padding: 96px 0 72px; text-align: center; }
+.error-code { font-size: clamp(72px, 14vw, 140px); font-weight: 800; letter-spacing: -0.05em; line-height: 1; font-variant-numeric: tabular-nums;
+  background: linear-gradient(90deg, #0b6e53, #1f9d73); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.error-page h1 { font-size: clamp(24px, 4vw, 34px); font-weight: 750; margin: 18px 0 10px; }
+.error-page p { max-width: 34em; margin: 0 auto 26px; }
 
 .coming-soon { min-height: 100vh; display: grid; place-items: center; padding: 48px 20px; }
 
