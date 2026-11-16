@@ -26,6 +26,7 @@ use yii\db\ActiveRecord;
  * @property string|null $naics_label
  * @property int|null $registered_agent_id
  * @property string|null $source_url
+ * @property int $people_hidden 1 when the owner opted out: officers, agent and addresses are not shown anywhere
  *
  * @property RegisteredAgent|null $agent
  * @property Person[] $people

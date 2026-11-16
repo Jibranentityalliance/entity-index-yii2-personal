@@ -765,6 +765,63 @@ $r = $cust->req('POST', '/admin/database/publish', ['ids' => [$hid], 'mode' => '
 check('release: customers cannot release companies', in_array($r['status'], [400, 403], true) && $hold() === 'hold/null');
 $pdo->exec("DELETE FROM entities WHERE id = $hid");
 $pdo->exec("DROP TABLE manual_companies");
+echo "Admin opt-outs\n";
+$pdo->exec("INSERT INTO entities (state, state_filing_number, url_key, slug, name, entity_type, status, filed_at, indexed_at, publish_at)
+    VALUES ('OH', 'O700', 'o700', 'opt-test-llc', 'OPT TEST LLC', 'LLC', 'Active', '2026-11-01 00:00:00', UTC_TIMESTAMP(), UTC_TIMESTAMP() - INTERVAL 1 MINUTE)");
+$oid = (int) $pdo->lastInsertId();
+$pdo->exec("INSERT INTO people (entity_id, name, role, title, address) VALUES ($oid, 'Owen Officer', 'officer', 'MGR', '1 Home St, Columbus, OH 43004'), ($oid, 'Ava Agent', 'agent', NULL, '2 Agent Way, Columbus, OH 43004')");
+$optPage = '/portal/company/oh/opt-test-llc-o700';
+$optFirst = (int) $pdo->query('SELECT COALESCE(MAX(id), 0) FROM opt_out_requests')->fetchColumn();
+$g = new Http('http://127.0.0.1:18088');
+$r = $g->ajax('/api/opt-out', ['entity_ref' => 'https://example.com' . $optPage, 'person_name' => 'Owen Officer', 'email' => 'owen@example.com', 'reason' => 'my home address'], '/opt-out');
+$rid = (int) $pdo->query("SELECT id FROM opt_out_requests WHERE email = 'owen@example.com' ORDER BY id DESC LIMIT 1")->fetchColumn();
+check('opt-out: the public form stores a pending request', $r['status'] === 200 && $rid > $optFirst && $pdo->query("SELECT status FROM opt_out_requests WHERE id = $rid")->fetchColumn() === 'pending');
+$page = $cust->get($optPage)['body'];
+check('opt-out: before approval the officer and agent are visible', str_contains($page, 'Owen Officer') && str_contains($page, 'Ava Agent'));
+check('opt-out: the queue lists the pending request', str_contains($ad->get('/admin/opt-outs')['body'], 'owen@example.com') && str_contains($ad->get('/admin/opt-outs')['body'], 'Review'));
+$r = $ad->get("/admin/opt-outs/view?id=$rid");
+check('opt-out: the request page finds the company from the pasted URL', $r['status'] === 200 && str_contains($r['body'], 'OPT TEST LLC') && str_contains($r['body'], 'Hide all people'));
+check('opt-out: a state and filing number also finds it', str_contains($ad->get("/admin/opt-outs/view?id=$rid&ref=" . urlencode('OH O700'))['body'], 'OPT TEST LLC') && !str_contains($ad->get("/admin/opt-outs/view?id=$rid&ref=" . urlencode('OH 9999999'))['body'], 'OPT TEST LLC'));
+check('opt-out: a customer gets 403 on the queue', $cust->get('/admin/opt-outs')['status'] === 403 && $cust->get("/admin/opt-outs/view?id=$rid")['status'] === 403);
+$r = $ad->postForm("/admin/opt-outs/resolve?id=$rid", ['note' => 'Confirmed by email'], "/admin/opt-outs/view?id=$rid");
+check('opt-out: approving without choosing a company changes nothing', $r['status'] === 302 && $pdo->query("SELECT status FROM opt_out_requests WHERE id = $rid")->fetchColumn() === 'pending' && (int) $pdo->query("SELECT people_hidden FROM entities WHERE id = $oid")->fetchColumn() === 0);
+$r = $ad->postForm("/admin/opt-outs/resolve?id=$rid", ['entity_id' => $oid, 'note' => 'Confirmed by email'], "/admin/opt-outs/view?id=$rid");
+$row = $pdo->query("SELECT status, entity_id, entity_state, entity_url_key, resolved_by, note FROM opt_out_requests WHERE id = $rid")->fetch(PDO::FETCH_ASSOC);
+check('opt-out: approving hides the people and records who and what', $r['status'] === 302 && (int) $pdo->query("SELECT people_hidden FROM entities WHERE id = $oid")->fetchColumn() === 1
+    && $row['status'] === 'done' && (int) $row['entity_id'] === $oid && $row['entity_state'] === 'OH' && $row['entity_url_key'] === 'o700' && (int) $row['resolved_by'] === $adminId && $row['note'] === 'Confirmed by email');
+$page = $cust->get($optPage)['body'];
+check('opt-out: the company page shows no people, agent or address and says why', $page !== '' && !str_contains($page, 'Owen Officer') && !str_contains($page, 'Ava Agent') && !str_contains($page, '1 Home St') && str_contains($page, 'removed from this company at the owner'));
+check('opt-out: searching the officer\'s name no longer finds the company', str_contains($cust->get('/portal/companies?q=Owen+Officer')['body'], '0 companies') && str_contains($cust->get('/portal/companies?q=OPT+TEST')['body'], 'OPT TEST LLC'));
+$r = $cust->postForm('/portal/export/companies', ['q' => 'OPT TEST'], '/portal/companies');
+check('opt-out: the CSV export keeps the company but not the people', str_contains($r['body'], 'OPT TEST LLC') && !str_contains($r['body'], 'Owen Officer') && !str_contains($r['body'], 'Ava Agent'));
+require_once "$root/helpers/Fmt.php";
+require_once "$root/modules/apiv1/serializers/EntitySerializer.php";
+$row = ['id' => 1, 'state' => 'OH', 'state_filing_number' => 'O700', 'name' => 'OPT TEST LLC', 'entity_type' => 'LLC', 'status' => 'Active', 'filed_at' => '2026-11-01 00:00:00', 'formation_date' => null,
+    'indexed_at' => '2026-11-01 00:00:00', 'county' => null, 'principal_address' => '1 Home St', 'mailing_address' => '1 Home St', 'naics_guess' => null, 'naics_label' => null, 'source_url' => null, 'agent' => null,
+    'people' => [['role' => 'officer', 'name' => 'Owen Officer', 'title' => 'MGR', 'address' => '1 Home St', 'street' => null, 'city' => null, 'state' => null, 'zip' => null, 'phone' => '6145550100']]];
+$shown = \app\modules\apiv1\serializers\EntitySerializer::entity($row);
+$gone = \app\modules\apiv1\serializers\EntitySerializer::entity($row + ['people_hidden' => 1]);
+check('opt-out: the API shape drops people, agent and addresses only when hidden', count($shown['people']) === 1 && $shown['principal_address'] === '1 Home St'
+    && $gone['people'] === [] && $gone['registered_agent'] === null && $gone['principal_address'] === null && $gone['mailing_address'] === null && $gone['name'] === 'OPT TEST LLC');
+$pdo->exec("DELETE FROM entities WHERE id = $oid");
+$pdo->exec('CREATE TABLE IF NOT EXISTS manual_companies (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, data LONGTEXT NOT NULL,
+    ignored_validation_count INT DEFAULT 0, qualified INT DEFAULT NULL, processed INT DEFAULT 0, date_added TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)');
+$pdo->exec("INSERT INTO manual_companies (id, user_id, data, qualified, date_added) VALUES (340, 4, " . $pdo->quote(json_encode(['company' => ['state' => 'OH', 'name' => 'OPT TEST LLC', 'document_number' => 'O700', 'type' => 'LLC', 'status' => '1'],
+    'registered_agent' => ['fname' => 'Ava', 'lname' => 'Agent', 'full_address' => '2 Agent Way, Columbus, OH 43004'], 'officers' => [['fname' => 'Owen', 'lname' => 'Officer', 'o_title' => 'MGR']], 'more_info' => []])) . ", 0, NOW())");
+$capture('php yii mirror/backfill', $mirrorEnv);
+$newId = (int) $pdo->query("SELECT id FROM entities WHERE state = 'OH' AND url_key = 'o700'")->fetchColumn();
+check('opt-out: a company that comes back from the source is hidden again', $newId > 0 && $newId !== $oid && (int) $pdo->query("SELECT people_hidden FROM entities WHERE id = $newId")->fetchColumn() === 1
+    && (int) $pdo->query("SELECT COUNT(*) FROM people WHERE entity_id = $newId")->fetchColumn() === 2 && !str_contains($cust->get($optPage)['body'], 'Owen Officer'));
+$r = $ad->postForm("/admin/opt-outs/reopen?id=$rid", [], "/admin/opt-outs/view?id=$rid");
+check('opt-out: reopening shows the people again and the request is pending', $r['status'] === 302 && $pdo->query("SELECT status FROM opt_out_requests WHERE id = $rid")->fetchColumn() === 'pending'
+    && (int) $pdo->query("SELECT people_hidden FROM entities WHERE id = $newId")->fetchColumn() === 0 && str_contains($cust->get($optPage)['body'], 'Owen Officer'));
+$r = $ad->postForm("/admin/opt-outs/reject?id=$rid", ['note' => 'Not the owner'], "/admin/opt-outs/view?id=$rid");
+check('opt-out: rejecting closes the request and changes nothing', $r['status'] === 302 && $pdo->query("SELECT status FROM opt_out_requests WHERE id = $rid")->fetchColumn() === 'rejected'
+    && (int) $pdo->query("SELECT people_hidden FROM entities WHERE id = $newId")->fetchColumn() === 0);
+check('opt-out: a closed request cannot be approved again', $ad->postForm("/admin/opt-outs/resolve?id=$rid", ['entity_id' => $newId], "/admin/opt-outs/view?id=$rid")['status'] === 302 && $pdo->query("SELECT status FROM opt_out_requests WHERE id = $rid")->fetchColumn() === 'rejected'
+    && (int) $pdo->query("SELECT people_hidden FROM entities WHERE id = $newId")->fetchColumn() === 0);
+$pdo->exec("DELETE FROM entities WHERE id = $newId");
+$pdo->exec('DROP TABLE manual_companies');
 proc_terminate($srvA);
 
 

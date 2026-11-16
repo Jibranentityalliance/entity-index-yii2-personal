@@ -34,6 +34,12 @@ class EntitySerializer
             ];
         }
 
+        $hidden = !empty($e['people_hidden']);
+        if ($hidden) {
+            $agent = null;
+            $people = [];
+        }
+
         $out = [
             'id' => (int) $e['id'],
             'state' => $e['state'] === 'NA' ? null : $e['state'],
@@ -45,8 +51,8 @@ class EntitySerializer
             'effective_at' => self::time($e['formation_date']),
             'indexed_at' => self::time($e['indexed_at']),
             'county' => self::text($e['county']),
-            'principal_address' => self::text($e['principal_address']),
-            'mailing_address' => self::text($e['mailing_address']),
+            'principal_address' => $hidden ? null : self::text($e['principal_address']),
+            'mailing_address' => $hidden ? null : self::text($e['mailing_address']),
             'industry' => $e['naics_guess'] ? ['naics' => $e['naics_guess'], 'label' => self::text($e['naics_label']), 'estimated' => true] : null,
             'registered_agent' => $agent,
             'people' => $people,

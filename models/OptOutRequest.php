@@ -13,6 +13,11 @@ use yii\db\ActiveRecord;
  * @property string $status
  * @property string $created_at
  * @property string|null $resolved_at
+ * @property int|null $entity_id
+ * @property string|null $entity_state
+ * @property string|null $entity_url_key
+ * @property int|null $resolved_by
+ * @property string|null $note
  */
 class OptOutRequest extends ActiveRecord
 {

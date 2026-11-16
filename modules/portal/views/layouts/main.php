@@ -31,6 +31,7 @@ if (Yii::$app->user->identity?->hasBulkAccess()) {
 if (Yii::$app->user->identity?->isAdmin()) {
     $nav[] = ['Database', 'fa-database', ['/admin/database/index'], 'admin/database'];
     $nav[] = ['Users', 'fa-users', ['/admin/users/index'], 'admin/users'];
+    $nav[] = ['Opt-outs', 'fa-user-slash', ['/admin/opt-outs/index'], 'admin/opt-outs'];
 }
 ?>
 <?php $this->beginPage() ?>

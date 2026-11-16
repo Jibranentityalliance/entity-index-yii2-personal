@@ -208,6 +208,9 @@ class MirrorConverter
             $byKey[$f['state'] . '|' . strtolower($f['url_key'])] = $f;
         }
 
+        $this->db->createCommand('UPDATE entities e SET e.people_hidden = 1 WHERE e.id IN (' . implode(',', array_map('intval', array_column($found, 'id'))) . ') AND e.people_hidden = 0'
+            . " AND EXISTS (SELECT 1 FROM opt_out_requests o WHERE o.status = 'done' AND o.entity_state = e.state AND o.entity_url_key = e.url_key)")->execute();
+
         $mapRows = $winners = [];
         foreach ($built as $b) {
             $f = $byKey[$b['entity']['state'] . '|' . $b['entity']['url_key']];

@@ -12,10 +12,11 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 
 $row = $e->attributes;
-$where = $full ? Fmt::cityState($e->principal_address) : null;
-$agents = array_values(array_filter($e->people, fn($p) => $p->role === 'agent'));
-$people = array_values(array_filter($e->people, fn($p) => $p->role !== 'agent'));
-$legacyAgent = $e->agent; // sample/seeded data keeps the agent in registered_agents
+$hidden = (bool) $e->people_hidden;
+$where = $full && !$hidden ? Fmt::cityState($e->principal_address) : null;
+$agents = $hidden ? [] : array_values(array_filter($e->people, fn($p) => $p->role === 'agent'));
+$people = $hidden ? [] : array_values(array_filter($e->people, fn($p) => $p->role !== 'agent'));
+$legacyAgent = $hidden ? null : $e->agent; // sample/seeded data keeps the agent in registered_agents
 $hasState = $st['code'] !== 'NA';
 $sourceName = ['FL' => 'Florida Division of Corporations (Sunbiz)', 'DE' => 'Delaware Division of Corporations', 'DC' => 'DC Dept. of Licensing and Consumer Protection'][$e->state] ?? ($hasState ? "{$st['name']} Secretary of State" : 'State registry');
 $this->title = Fmt::na($e->name);
@@ -55,6 +56,9 @@ JS);
     <?php if ($full && $e->county): ?> · <a href="<?= Url::to(['/portal/companies/index', 'state' => $st['code'], 'county' => $e->county]) ?>"><?= Html::encode($e->county) ?> County</a><?php endif ?>
 </div>
 
+<?php if ($hidden): ?>
+    <div class="callout callout-warning mb-3"><p class="mb-0 small">Personal details were removed from this company at the owner's request. The filing itself is still public at the state.</p></div>
+<?php endif ?>
 <?php if ($free !== null): ?>
     <p class="text-muted small mb-3">Lookup <?= (int) $free['used'] ?> of <?= (int) $free['lookupsPerDay'] ?> today. Reopening this company today does not use another.</p>
 <?php endif ?>
@@ -111,7 +115,7 @@ JS);
                     </dl>
                 </div>
             <?php else: ?>
-                <div class="card-body text-muted">N/A</div>
+                <div class="card-body text-muted"><?= $hidden ? 'Removed at the owner’s request.' : 'N/A' ?></div>
             <?php endif ?>
         </div>
 
@@ -120,7 +124,9 @@ JS);
                 <h3 class="card-title">Officers &amp; owners</h3>
                 <div class="card-tools"><span class="badge badge-secondary"><?= count($people) ?> on file</span><?php if (!$full): ?> <span class="badge badge-warning">Pro</span><?php endif ?></div>
             </div>
-            <?php if ($full): ?>
+            <?php if ($hidden): ?>
+                <div class="card-body text-muted">Removed at the owner’s request.</div>
+            <?php elseif ($full): ?>
                 <div class="table-responsive">
                     <table class="table mb-0">
                         <thead><tr><th>Name</th><th>Title</th><th>Address</th><th>Phone</th></tr></thead>
