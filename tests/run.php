@@ -739,6 +739,32 @@ $save(['status' => '10', 'plan' => 'free']);
 $pdo->exec("UPDATE `user` SET limit_overrides = NULL WHERE id = $freeId");
 $r = $ad->postForm("/admin/users/update?id=$adminId", ['UserForm' => ['name' => '', 'plan' => 'free', 'role' => 'customer', 'status' => '10']], "/admin/users/update?id=$adminId");
 check('admin users: an admin cannot demote or disable themselves', $r['status'] === 200 && str_contains($r['body'], 'cannot change your own role') && $pdo->query("SELECT CONCAT(role, '/', status) FROM `user` WHERE id = $adminId")->fetchColumn() === 'admin/10');
+echo "Admin hold and release\n";
+$pdo->exec("UPDATE `user` SET plan = 'pro' WHERE email = 'pro@example.com'");
+$pdo->exec("INSERT INTO entities (state, state_filing_number, url_key, slug, name, entity_type, status, filed_at, indexed_at, publish_at)
+    VALUES ('OH', 'H900', 'h900', 'hold-test-llc', 'HOLD TEST LLC', 'LLC', 'Active', '2026-11-01 00:00:00', UTC_TIMESTAMP(), NULL)");
+$hid = (int) $pdo->lastInsertId();
+$hold = fn() => $pdo->query("SELECT CONCAT(IFNULL(publish_override, '-'), '/', IF(publish_at IS NULL, 'null', IF(publish_at <= UTC_TIMESTAMP(), 'live', 'later'))) FROM entities WHERE id = $hid")->fetchColumn();
+check('hold: a held company is a 404 for customers', $hold() === '-/null' && $cust->get('/portal/company/oh/hold-test-llc-h900')['status'] === 404);
+check('hold: the Held tab finds it by name and by filing number', str_contains($ad->get('/admin/database?show=held&q=HOLD+TEST')['body'], 'HOLD TEST LLC') && str_contains($ad->get('/admin/database?show=held&q=H900')['body'], 'HOLD TEST LLC')
+    && !str_contains($ad->get('/admin/database?show=held&q=nothing-matches-this')['body'], 'HOLD TEST LLC'));
+$r = $ad->postForm('/admin/database/publish', ['ids' => [$hid], 'mode' => 'release', 'show' => 'held', 'page' => 1, 'q' => ''], '/admin/database?show=held');
+check('release: an admin can release a held company now', $r['status'] === 302 && $hold() === 'release/live' && $cust->get('/portal/company/oh/hold-test-llc-h900')['status'] === 200
+    && (int) $pdo->query("SELECT publish_override_by FROM entities WHERE id = $hid")->fetchColumn() === $adminId);
+check('release: the Published tab lists it with a manual badge', str_contains($ad->get('/admin/database?show=published&q=HOLD+TEST')['body'], 'Manual release'));
+$r = $ad->postForm('/admin/database/publish', ['ids' => [$hid], 'mode' => 'hold', 'show' => 'published', 'page' => 1, 'q' => ''], '/admin/database?show=published');
+check('hold: an admin can pull a published company back', $r['status'] === 302 && $hold() === 'hold/null' && $cust->get('/portal/company/oh/hold-test-llc-h900')['status'] === 404);
+$pdo->exec('CREATE TABLE IF NOT EXISTS manual_companies (id INT NOT NULL AUTO_INCREMENT PRIMARY KEY, user_id INT NOT NULL, data LONGTEXT NOT NULL,
+    ignored_validation_count INT DEFAULT 0, qualified INT DEFAULT NULL, processed INT DEFAULT 0, date_added TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)');
+$pdo->exec("INSERT INTO manual_companies (id, user_id, data, qualified, date_added) VALUES (330, 4, " . $pdo->quote(json_encode(['company' => ['state' => 'OH', 'name' => 'HOLD TEST LLC', 'document_number' => 'H900', 'type' => 'LLC', 'status' => '1'], 'registered_agent' => [], 'officers' => [], 'more_info' => []])) . ", 0, NOW())");
+$capture('php yii mirror/backfill', $mirrorEnv);
+check('hold: a source sync does not undo a manual hold', $hold() === 'hold/null' && (int) $pdo->query("SELECT source_id FROM entities WHERE id = $hid")->fetchColumn() === 330);
+$r = $ad->postForm('/admin/database/publish', ['mode' => 'release', 'show' => 'held'], '/admin/database?show=held');
+check('release: posting with nothing selected changes nothing', $r['status'] === 302 && $hold() === 'hold/null');
+$r = $cust->req('POST', '/admin/database/publish', ['ids' => [$hid], 'mode' => 'release']);
+check('release: customers cannot release companies', in_array($r['status'], [400, 403], true) && $hold() === 'hold/null');
+$pdo->exec("DELETE FROM entities WHERE id = $hid");
+$pdo->exec("DROP TABLE manual_companies");
 proc_terminate($srvA);
 
 
