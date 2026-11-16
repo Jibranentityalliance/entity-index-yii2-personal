@@ -79,7 +79,7 @@ class SeedController extends Controller
             }
 
             $cols = ['id', 'state', 'state_filing_number', 'url_key', 'slug', 'name', 'entity_type', 'status', 'formation_date',
-                'filed_at', 'indexed_at', 'principal_address', 'mailing_address', 'county', 'naics_guess', 'naics_label',
+                'filed_at', 'indexed_at', 'publish_at', 'principal_address', 'mailing_address', 'county', 'naics_guess', 'naics_label',
                 'registered_agent_id', 'source_url'];
             $lastIndexed = [];
             foreach (array_chunk($entities, 500) as $chunk) {
@@ -91,7 +91,7 @@ class SeedController extends Controller
                     $lastIndexed[$e['state']] = max($lastIndexed[$e['state']] ?? '', $indexed);
                     $ents[] = [
                         $e['id'], $e['state'], $e['state_filing_number'], $e['url_key'], $e['slug'], $e['name'], $e['entity_type'],
-                        $e['status'], $e['formation_date'], $filed, $indexed, $e['principal_address'], $e['mailing_address'],
+                        $e['status'], $e['formation_date'], $filed, $indexed, $indexed, $e['principal_address'], $e['mailing_address'],
                         $e['county'], $e['naics_guess'], $e['naics_label'] ?? null,
                         $a ? $agentIds[$a['name'] . '|' . ($a['address'] ?? '')] : null, $e['source_url'],
                     ];

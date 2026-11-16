@@ -47,6 +47,10 @@ The portal UI uses stock AdminLTE 3 / Bootstrap 4 components (info-box, card, ca
 API keys and the read-only REST API are documented in the **API** section below.
 Not built yet: saved searches, billing (Stripe is a placeholder), admin queues for contact / opt-out / waitlist.
 
+## Publishing rules (held companies)
+
+Every company has a `publish_at` time (`entities.publish_at`, UTC) and is invisible everywhere (portal, search, company pages, counts, API, CSV export) until that time has passed; there is no job, reads simply filter on `publish_at <= now`. The mirror sync (`MirrorConverter::publishAt`) sets it from the source row's `qualified` column and `date_added`: `qualified = 0` is published on arrival, `qualified = 1` is held for `publishHoldHours` (48, in `config/params.php`; not final), and `qualified` NULL is held until the source sets it. The newest source row for a company wins, so a row that flips to 0 publishes the company the next time it is synced. More factors (skip-trace result, service status, an admin hold or release) change only that one function. The migration sets `publish_at = indexed_at` for companies that already exist; run `php yii mirror/backfill --restart` once after deploying to recompute them from the source. The landing-page numbers (`MirrorStats`) still count source rows, held ones included.
+
 ## Free plan limits
 
 Free accounts are limited in `config/params.php` under `freeLimits`; **the numbers are not final, change them there and nothing else**: `historyDays` (7) and `lookupsPerDay` (10). Paid plans and admins have neither limit. The pricing page text reads these values.

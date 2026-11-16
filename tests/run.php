@@ -479,12 +479,12 @@ check('stats: entity kinds', app\services\MirrorStats::entityKind('Foreign Limit
     && app\services\MirrorStats::entityKind('Limited Partnership') === 'Partnership' && app\services\MirrorStats::entityKind('') === 'Business');
 proc_terminate($srvS);
 echo "Portal companies from the mirror (mirror/backfill, mirror/apply)\n";
-$pdo->exec("INSERT INTO manual_companies (id, user_id, data, date_added) VALUES (300, 4, " . $pdo->quote(json_encode(['company' => ['state' => 'FL', 'name' => 'PHONE SAMPLE LLC',
+$pdo->exec("INSERT INTO manual_companies (id, user_id, data, qualified, date_added) VALUES (300, 4, " . $pdo->quote(json_encode(['company' => ['state' => 'FL', 'name' => 'PHONE SAMPLE LLC',
     'document_number' => 'L26000300', 'type' => 'LLC', 'date_filed' => '10/20/2026', 'status' => '1'], 'registered_agent' => ['fname' => 'Ana', 'lname' => 'Sample',
-    'full_address' => '1 Main St, Miami, FL 33101', 'phone' => '305-555-0142'], 'officers' => [['fname' => 'Bo', 'lname' => 'Owner', 'o_title' => 'MGR', 'phone' => '(786) 555-0199']], 'more_info' => []])) . ", NOW()),
-    (301, 4, " . $pdo->quote(json_encode(['company' => ['state' => 'FL', 'name' => 'PHONE SAMPLE LLC RENAMED', 'document_number' => 'L26000300', 'type' => 'LLC', 'status' => '1'], 'registered_agent' => [], 'officers' => [], 'more_info' => []])) . ", NOW()),
-    (303, 4, " . $pdo->quote(json_encode(['company' => ['state' => 'OH', 'name' => 'FILED AFTER ADDED LLC', 'document_number' => '5000303', 'type' => 'LLC', 'date_filed' => date('m/d/Y'), 'status' => '1'], 'registered_agent' => [], 'officers' => [], 'more_info' => []])) . ", NOW() - INTERVAL 5 DAY),
-    (302, 4, " . $pdo->quote(json_encode(['company' => ['state' => 'OH', 'name' => 'FUTURE DATE LLC', 'document_number' => '5000302', 'type' => 'LLC', 'date_filed' => '01/06/2030', 'effective_date' => '1/6/30', 'status' => '1'], 'registered_agent' => [], 'officers' => [], 'more_info' => []])) . ", NOW())");
+    'full_address' => '1 Main St, Miami, FL 33101', 'phone' => '305-555-0142'], 'officers' => [['fname' => 'Bo', 'lname' => 'Owner', 'o_title' => 'MGR', 'phone' => '(786) 555-0199']], 'more_info' => []])) . ", 0, NOW()),
+    (301, 4, " . $pdo->quote(json_encode(['company' => ['state' => 'FL', 'name' => 'PHONE SAMPLE LLC RENAMED', 'document_number' => 'L26000300', 'type' => 'LLC', 'status' => '1'], 'registered_agent' => [], 'officers' => [], 'more_info' => []])) . ", 0, NOW()),
+    (303, 4, " . $pdo->quote(json_encode(['company' => ['state' => 'OH', 'name' => 'FILED AFTER ADDED LLC', 'document_number' => '5000303', 'type' => 'LLC', 'date_filed' => date('m/d/Y'), 'status' => '1'], 'registered_agent' => [], 'officers' => [], 'more_info' => []])) . ", 0, NOW() - INTERVAL 5 DAY),
+    (302, 4, " . $pdo->quote(json_encode(['company' => ['state' => 'OH', 'name' => 'FUTURE DATE LLC', 'document_number' => '5000302', 'type' => 'LLC', 'date_filed' => '01/06/2030', 'effective_date' => '1/6/30', 'status' => '1'], 'registered_agent' => [], 'officers' => [], 'more_info' => []])) . ", 0, NOW())");
 $mirrorEnv = ['MIRROR_DB' => $testDb, 'MIRROR_TZ' => 'UTC'] + $einEnv;
 [$code, $out] = $capture('php yii mirror/backfill --batch=4', $mirrorEnv);
 check('mirror/backfill converts every source row', $code === 0 && str_contains($out, 'backfill done: 18 rows'), "exit $code: $out");
@@ -505,6 +505,15 @@ check('mirror/apply replays a delete: the company falls back to the older submis
     && $conv("SELECT name FROM entities WHERE url_key = 'l26000300'") === 'PHONE SAMPLE LLC'
     && $conv("SELECT COUNT(*) FROM people p JOIN entities e ON e.id = p.entity_id WHERE e.url_key = 'l26000300'") == 2, $out);
 check('mirror/apply: a company with no rows left is removed', $conv("SELECT COUNT(*) FROM entities WHERE url_key = 'r209'") == 0 && $conv('SELECT COUNT(*) FROM mirror_changes') == 0);
+$pdo->exec("INSERT INTO manual_companies (id, user_id, data, qualified, date_added) VALUES
+    (310, 4, " . $pdo->quote(json_encode(['company' => ['state' => 'OH', 'name' => 'PUB ZERO LLC', 'document_number' => 'P310', 'type' => 'LLC', 'status' => '1'], 'registered_agent' => [], 'officers' => [], 'more_info' => []])) . ", 0, NOW()),
+    (311, 4, " . $pdo->quote(json_encode(['company' => ['state' => 'OH', 'name' => 'PUB HELD LLC', 'document_number' => 'P311', 'type' => 'LLC', 'status' => '1'], 'registered_agent' => [], 'officers' => [], 'more_info' => []])) . ", 1, NOW()),
+    (312, 4, " . $pdo->quote(json_encode(['company' => ['state' => 'OH', 'name' => 'PUB UNDECIDED LLC', 'document_number' => 'P312', 'type' => 'LLC', 'status' => '1'], 'registered_agent' => [], 'officers' => [], 'more_info' => []])) . ", NULL, NOW())");
+$capture('php yii mirror/backfill', $mirrorEnv);
+$pubRow = fn(string $key) => $pdo->query("SELECT TIMESTAMPDIFF(HOUR, indexed_at, publish_at) FROM entities WHERE url_key = '$key'")->fetchColumn();
+check('publish_at: qualified 0 is published on arrival', (string) $pubRow('p310') === '0');
+check('publish_at: qualified 1 is held for the configured hours', (string) $pubRow('p311') === '48');
+check('publish_at: qualified NULL is held until the source decides', $pdo->query("SELECT publish_at IS NULL FROM entities WHERE url_key = 'p312'")->fetchColumn() == 1);
 $srvM = startServer(18087, $env, $root);
 $m = new Http('http://127.0.0.1:18087');
 $m->postForm('/portal/auth/login', ['LoginForm' => ['email' => 'pro@example.com', 'password' => 'Pro-pass-1']]);
@@ -515,6 +524,14 @@ $pdo->exec("UPDATE `user` SET plan = 'free' WHERE email = 'pro@example.com'");
 $page = $m->get('/portal/company/fl/phone-sample-llc-l26000300')['body'];
 check('free: no phone numbers in the page at all', !str_contains($page, '555-0142') && !str_contains($page, '••42') && !str_contains($page, '555-0199') && str_contains($page, 'Upgrade to Pro'));
 $pdo->exec("UPDATE `user` SET plan = 'pro' WHERE email = 'pro@example.com'");
+check('publish_at: a published company opens', $m->get('/portal/company/oh/pub-zero-llc-p310')['status'] === 200);
+check('publish_at: a held company is a 404 in the portal', $m->get('/portal/company/oh/pub-held-llc-p311')['status'] === 404 && $m->get('/portal/company/oh/pub-undecided-llc-p312')['status'] === 404);
+$r = $m->get('/portal/companies?q=PUB+HELD');
+check('publish_at: held companies are not in search results', str_contains($r['body'], '0 companies') && !str_contains($r['body'], 'PUB HELD LLC'));
+check('publish_at: a published company is in search results', str_contains($m->get('/portal/companies?q=PUB+ZERO')['body'], 'PUB ZERO LLC'));
+$pdo->exec("UPDATE entities SET publish_at = NOW() - INTERVAL 1 MINUTE WHERE url_key = 'p311'");
+check('publish_at: a held company appears once its time has passed', $m->get('/portal/company/oh/pub-held-llc-p311')['status'] === 200);
+$pdo->exec("DELETE FROM entities WHERE url_key IN ('p310', 'p311', 'p312')");
 proc_terminate($srvM);
 $pdo->exec('DROP TABLE manual_companies');
 
@@ -558,7 +575,7 @@ while ($cursor && $pages < 50) {
     $pages++;
 }
 check('entities: cursor paging walks every company once, newest id first', count($seen) === count(array_unique($seen)) && $seen[0] > $seen[1] && $seen === array_values(array_unique($seen))
-    && count($seen) === (int) $pdo->query('SELECT COUNT(*) FROM entities')->fetchColumn(), (string) count($seen));
+    && count($seen) === (int) $pdo->query('SELECT COUNT(*) FROM entities WHERE publish_at <= UTC_TIMESTAMP()')->fetchColumn(), (string) count($seen));
 check('entities: limit up to 1000 is allowed, above is 400', count(json_decode($api('/api/v1/entities?limit=1000', $token)['body'], true)['data']) === 1000 && $api('/api/v1/entities?limit=1001', $token)['status'] === 400);
 check('entities: bad cursor, state, date and order are 400', $api('/api/v1/entities?cursor=%21%21', $token)['status'] === 400 && $api('/api/v1/entities?state=Florida', $token)['status'] === 400
     && $api('/api/v1/entities?filed_after=2026-13-40', $token)['status'] === 400 && $api('/api/v1/entities?order=sideways', $token)['status'] === 400);
@@ -606,7 +623,7 @@ $pdo->exec("UPDATE `user` SET plan = 'pro' WHERE email = 'pro@example.com'");
 echo "CSV export\n";
 $exportCap = 5000;
 $xb = "x:" . gmdate('Y-m');
-$flCount = (int) $pdo->query("SELECT COUNT(*) FROM entities WHERE state = 'FL'")->fetchColumn();
+$flCount = (int) $pdo->query("SELECT COUNT(*) FROM entities WHERE state = 'FL' AND publish_at <= UTC_TIMESTAMP()")->fetchColumn();
 $page = $a->get('/portal/companies?state=FL')['body'];
 check('pro: the Companies page has an Export CSV button, a confirmation modal and the usage card', str_contains($page, 'Export CSV') && str_contains($page, 'id="export-modal"') && str_contains($page, 'CSV export this month') && str_contains($page, 'rows will be exported'));
 check('export needs POST', $a->get('/portal/export/companies')['status'] === 405);
@@ -649,7 +666,7 @@ $f = new Http('http://127.0.0.1:18088');
 $f->postForm('/portal/auth/login', ['LoginForm' => ['email' => 'free@example.com', 'password' => 'Free-pass-1']]);
 $lookups = fn() => (int) $pdo->query("SELECT COUNT(*) FROM company_lookup cl JOIN `user` u ON u.id = cl.user_id WHERE u.email = 'free@example.com'")->fetchColumn();
 $r = $f->get('/portal/companies');
-$allCount = number_format((int) $pdo->query('SELECT COUNT(*) FROM entities')->fetchColumn());
+$allCount = number_format((int) $pdo->query('SELECT COUNT(*) FROM entities WHERE publish_at <= UTC_TIMESTAMP()')->fetchColumn());
 check('free: Companies searches every filing and shows the plan card', str_contains($r['body'], $allCount . ' companies') && str_contains($r['body'], 'Free plan') && str_contains($r['body'], '0 of ' . $flimits['lookupsPerDay'] . ' company lookups used today'));
 check('free: filings older than the window carry a lock icon in the list', str_contains($r['body'], 'Older than your plan covers'));
 check('free: Companies has no County column and an officer-free search hint', !str_contains($r['body'], '>County<') && str_contains($r['body'], 'Name, agent or filing number'));

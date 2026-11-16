@@ -66,7 +66,7 @@ class EntitiesController extends ApiController
 
     private function respond(array $where): array
     {
-        $e = Entity::find()->alias('e')->asArray()->where($where)->with(['people', 'agent', 'filings'])->orderBy(['e.id' => SORT_DESC])->one();
+        $e = Entity::find()->alias('e')->asArray()->where($where)->andWhere(EntityRepository::published('e'))->with(['people', 'agent', 'filings'])->orderBy(['e.id' => SORT_DESC])->one();
         if ($e === null) {
             throw new NotFoundHttpException('Company not found.');
         }

@@ -34,6 +34,13 @@ return [
         'bulk' => ['monthlyCalls' => 500000, 'monthlyRows' => 5000000, 'perMinute' => 600],
     ],
 
+    // A company from the mirrored feed goes public at publish_at (entities.publish_at); every portal, API and export read hides it before then.
+    //   qualified = 0     published as soon as it arrives
+    //   qualified = 1     held for this many hours after the row was added
+    //   qualified NULL    held until the source sets it
+    // Not final: change the number here and nothing else (rows already synced keep their publish_at until they are synced again).
+    'publishHoldHours' => 48,
+
     // Free plan limits. Not final: change the numbers here and nothing else.
     //   historyDays    company pages only open for filings from the last N days, counted back from the latest filing day (search and filters cover everything)
     //   lookupsPerDay  different company pages a free account can open a day (reportTz calendar day); reopening one the same day is free

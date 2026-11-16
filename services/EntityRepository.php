@@ -42,6 +42,11 @@ class EntityRepository
         return self::paginate($q, $order, $p['page'] ?? 1, $p['pageSize'] ?? 25, $orderParams);
     }
 
+    public static function published(string $alias = ''): array
+    {
+        return ['<=', ($alias !== '' ? $alias . '.' : '') . 'publish_at', gmdate('Y-m-d H:i:s')];
+    }
+
     public static function filteredQuery(array $p, ?string &$key = null): ActiveQuery
     {
         $q = self::base();
@@ -89,9 +94,9 @@ class EntityRepository
     {
         $key = 'ei.latestday.' . ($state ?? 'all');
         return self::remember($key, function () use ($state) {
-            $q = (new Query())->from('entities');
+            $q = (new Query())->from('entities')->where(self::published());
             if ($state) {
-                $q->where(['state' => strtoupper($state)]);
+                $q->andWhere(['state' => strtoupper($state)]);
             }
             $max = $q->max('filed_at');
             return $max ? substr($max, 0, 10) : null;
@@ -108,20 +113,20 @@ class EntityRepository
         return self::remember('ei.statestats', function () {
             $latest = self::latestFilingDay();
             $stats = [];
-            $totals = (new Query())->select(['state', 'total' => 'COUNT(*)', 'last' => 'MAX(indexed_at)'])->from('entities')->groupBy('state')->all();
+            $totals = (new Query())->select(['state', 'total' => 'COUNT(*)', 'last' => 'MAX(indexed_at)'])->from('entities')->where(self::published())->groupBy('state')->all();
             foreach ($totals as $r) {
                 $stats[$r['state']] = ['state' => $r['state'], 'total' => (int) $r['total'], 'last24h' => 0, 'latestDayCount' => 0, 'last7Days' => 0,
                     'medianLagHours' => null, 'lastIndexedAt' => $r['last']];
             }
             $recent = (new Query())->select(['state', 'n' => 'COUNT(*)'])->from('entities')
-                ->where(['>=', 'indexed_at', gmdate('Y-m-d H:i:s', time() - 86400)])->groupBy('state')->all();
+                ->where(self::published())->andWhere(['>=', 'indexed_at', gmdate('Y-m-d H:i:s', time() - 86400)])->groupBy('state')->all();
             foreach ($recent as $r) {
                 $stats[$r['state']]['last24h'] = (int) $r['n'];
             }
             if ($latest) {
                 $weekStart = (new \DateTimeImmutable($latest, new \DateTimeZone('UTC')))->modify('-6 days')->format('Y-m-d');
                 $rows = (new Query())->select(['state', 'filed_at', 'indexed_at'])->from('entities')
-                    ->where(['>=', 'filed_at', $weekStart . ' 00:00:00'])->each(1000);
+                    ->where(self::published())->andWhere(['>=', 'filed_at', $weekStart . ' 00:00:00'])->each(1000);
                 $lags = [];
                 foreach ($rows as $r) {
                     $s = $r['state'];
@@ -163,7 +168,7 @@ class EntityRepository
                 }
                 $weekStart = (new \DateTimeImmutable($latest, new \DateTimeZone('UTC')))->modify('-6 days')->format('Y-m-d');
                 $q = (new Query())->from(['p' => 'people'])->innerJoin(['e' => 'entities'], 'e.id = p.entity_id')
-                    ->where(['>=', 'e.filed_at', $weekStart . ' 00:00:00']);
+                    ->where(self::published('e'))->andWhere(['>=', 'e.filed_at', $weekStart . ' 00:00:00']);
                 foreach (['street', 'city', 'state', 'zip'] as $col) {
                     $q->andWhere(['<>', "p.$col", '']); // also false for NULL
                 }
@@ -181,7 +186,7 @@ class EntityRepository
         $from = $from !== null && self::isDay($from) ? $from : null;
         $to = $to !== null && self::isDay($to) ? $to : null;
         return self::remember("ei.statecounts.$from.$to", function () use ($from, $to) {
-            $q = (new Query())->select(['state', 'n' => 'COUNT(*)'])->from('entities')->groupBy('state');
+            $q = (new Query())->select(['state', 'n' => 'COUNT(*)'])->from('entities')->where(self::published())->groupBy('state');
             if ($from) {
                 $q->andWhere(['>=', 'filed_at', $from . ' 00:00:00']);
             }
@@ -194,12 +199,12 @@ class EntityRepository
 
     public static function totalCount(): int
     {
-        return (int) self::remember('ei.total', fn() => (new Query())->from('entities')->count());
+        return (int) self::remember('ei.total', fn() => (new Query())->from('entities')->where(self::published())->count());
     }
 
     public static function find(string $state, string $urlKey): ?Entity
     {
-        return Entity::find()->where(['state' => strtoupper($state), 'url_key' => strtolower($urlKey)])
+        return Entity::find()->where(['state' => strtoupper($state), 'url_key' => strtolower($urlKey)])->andWhere(self::published())
             ->with(['agent', 'people', 'filings'])->one();
     }
 
@@ -208,7 +213,7 @@ class EntityRepository
     {
         $out = [];
         $base = fn(): ActiveQuery => self::base()->select(self::SUMMARY_COLS)
-            ->where(['e.state' => $e->state, 'e.county' => $e->county])->andWhere(['<>', 'e.id', $e->id])
+            ->andWhere(['e.state' => $e->state, 'e.county' => $e->county])->andWhere(['<>', 'e.id', $e->id])
             ->orderBy(['e.filed_at' => SORT_DESC])->limit($limit);
         if ($e->naics_guess) {
             $out = $base()->andWhere(['e.naics_guess' => $e->naics_guess])->asArray()->all();
@@ -225,7 +230,7 @@ class EntityRepository
 
     private static function base(): ActiveQuery
     {
-        return Entity::find()->alias('e')->asArray();
+        return Entity::find()->alias('e')->asArray()->andWhere(self::published('e'));
     }
 
     private static function paginate(ActiveQuery $q, array|string $order, $page, $pageSize, array $orderParams = []): array

@@ -25,7 +25,7 @@ class MirrorConverter
 {
     public const CURSOR = 'backfill_cursor';
     private const ENTITY_COLS = ['source_id', 'state', 'state_filing_number', 'url_key', 'slug', 'name', 'entity_type', 'status',
-        'formation_date', 'filed_at', 'indexed_at', 'source_url'];
+        'formation_date', 'filed_at', 'indexed_at', 'publish_at', 'source_url'];
 
     private ManualCompanyMapper $mapper;
     private string $table;
@@ -135,6 +135,7 @@ class MirrorConverter
             'formation_date' => $effective ?? $filed,
             'filed_at' => $filed ? $filed . ' 00:00:00' : null,
             'indexed_at' => $indexed,
+            'publish_at' => $this->publishAt($row['qualified'] ?? null, $indexed),
             'source_url' => isset($c['company_url']) ? mb_substr($c['company_url'], 0, 500) : null,
         ];
         $out = [];
@@ -153,6 +154,19 @@ class MirrorConverter
             ];
         }
         return ['entity' => $entity, 'people' => $out];
+    }
+
+    /** When the company may go public: now for unqualified rows, after the hold for qualified ones, never while undecided. */
+    private function publishAt(mixed $qualified, ?string $indexed): ?string
+    {
+        if ($indexed === null || !is_numeric($qualified)) {
+            return null;
+        }
+        return match ((int) $qualified) {
+            0 => $indexed,
+            1 => gmdate('Y-m-d H:i:s', strtotime($indexed . ' UTC') + (int) round((float) (\Yii::$app->params['publishHoldHours'] ?? 48) * 3600)),
+            default => null,
+        };
     }
 
     /** Upserts a batch of source rows (any order); newest source row per company wins. */
