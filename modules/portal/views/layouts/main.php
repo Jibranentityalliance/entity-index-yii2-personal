@@ -25,6 +25,9 @@ $nav = [
     ['API keys', 'fa-key', ['/portal/api-keys/index'], 'portal/api-keys'],
     ['API docs', 'fa-book', ['/portal/api-docs/index'], 'portal/api-docs'],
 ];
+if (Yii::$app->user->identity?->hasBulkAccess()) {
+    $nav[] = ['Bulk data', 'fa-download', ['/portal/bulk/index'], 'portal/bulk'];
+}
 if (Yii::$app->user->identity?->isAdmin()) {
     $nav[] = ['Database', 'fa-database', ['/admin/database/index'], 'admin/database'];
 }

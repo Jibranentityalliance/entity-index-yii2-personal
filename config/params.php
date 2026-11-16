@@ -53,6 +53,13 @@ return [
     // Free accounts cannot export. The pricing text below, the Companies page and the tests read these values.
     'exportLimits' => $exportLimits,
 
+    'bulk' => [
+        'dir' => env('BULK_DIR', '@runtime/bulk'),
+        'sendfile' => env('BULK_SENDFILE', 'php'),
+        'keepDays' => 7,
+        'downloadsPerDay' => 20,
+    ],
+
     // Proposed prices — change here; the pricing page and home page read from this list.
     'tiers' => [
         [

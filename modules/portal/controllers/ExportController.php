@@ -3,6 +3,7 @@
 namespace app\modules\portal\controllers;
 
 use app\modules\apiv1\serializers\EntitySerializer;
+use app\services\CompanyCsv;
 use app\services\EntityRepository;
 use app\services\ExportUsage;
 use Yii;
@@ -13,11 +14,6 @@ use yii\web\Response;
 class ExportController extends PortalController
 {
     private const CHUNK = 1000;
-
-    private const COLUMNS = [
-        'Company', 'State', 'Filing number', 'Entity type', 'Status', 'Filed', 'County', 'Principal address', 'Mailing address',
-        'Registered agent', 'Registered agent address', 'Registered agent phone', 'Officers', 'Officer phones', 'Industry (estimated)', 'Source URL',
-    ];
 
     public function behaviors()
     {
@@ -47,7 +43,7 @@ class ExportController extends PortalController
         $rows = min($total, $allowance);
         $fp = fopen('php://temp', 'w+');
         fwrite($fp, "\xEF\xBB\xBF");
-        fputcsv($fp, self::COLUMNS, ',', '"', '');
+        fputcsv($fp, CompanyCsv::COLUMNS, ',', '"', '');
         $written = 0;
         for ($offset = 0; $offset < $rows; $offset += self::CHUNK) {
             $batch = EntityRepository::filteredQuery($params)->with(['people', 'agent'])
@@ -56,7 +52,7 @@ class ExportController extends PortalController
                 break;
             }
             foreach ($batch as $e) {
-                fputcsv($fp, $this->line(EntitySerializer::entity($e)), ',', '"', '');
+                fputcsv($fp, CompanyCsv::line(EntitySerializer::entity($e)), ',', '"', '');
                 $written++;
             }
         }
@@ -77,26 +73,5 @@ class ExportController extends PortalController
         }
         Yii::$app->session->setFlash('error', $message);
         return $this->redirect($back);
-    }
-
-    private function line(array $e): array
-    {
-        $agent = $e['registered_agent'];
-        $officers = array_map(fn(array $p) => $p['name'] . ($p['title'] ? ' (' . $p['title'] . ')' : ''), $e['people']);
-        $phones = array_map(fn(array $p) => $p['name'] . ': ' . $p['phone'], array_filter($e['people'], fn(array $p) => $p['phone'] !== null));
-        return array_map([$this, 'safe'], [
-            $e['name'], $e['state'], $e['filing_number'], $e['entity_type'], $e['status'],
-            $e['filed_at'] ? substr($e['filed_at'], 0, 10) : null,
-            $e['county'], $e['principal_address'], $e['mailing_address'],
-            $agent['name'] ?? null, $agent['address']['full'] ?? null, $agent['phone'] ?? null,
-            implode('; ', $officers), implode('; ', $phones),
-            $e['industry']['label'] ?? null, $e['source']['url'],
-        ]);
-    }
-
-    private function safe(?string $v): string
-    {
-        $v = (string) $v;
-        return $v !== '' && strpos("=+-@\t\r", $v[0]) !== false ? "'" . $v : $v;
     }
 }

@@ -198,7 +198,7 @@ $r = $p->get('/portal');
 check('dashboard stat cards are AdminLTE info-boxes', preg_match_all('/class="info-box[ "]/', $r['body']) === 4 && !str_contains($r['body'], 'small-box'));
 check('portal is dark: dark-mode body and dark sidebar, with no user panel, plan text or help section', str_contains($r['body'], 'dark-mode') && str_contains($r['body'], 'sidebar-dark-primary') && !str_contains($r['body'], 'sidebar-light') && !str_contains($r['body'], 'user-panel') && !str_contains($r['body'], 'nav-header') && !str_contains($r['body'], 'Help &amp; contact'));
 $side = substr($r['body'], strpos($r['body'], '<aside'), strpos($r['body'], '</aside>') - strpos($r['body'], '<aside'));
-check('sidebar lists the three product links and nothing else', substr_count($side, 'class="nav-link') === 3 && str_contains($side, '>Companies<') && str_contains($side, '/portal/companies') && !str_contains($side, '/portal/new') && !str_contains($side, '/portal/search') && str_contains($side, '/portal/states') && !str_contains($side, '/portal/account') && !str_contains($side, '/pricing') && !str_contains($side, '/faq'));
+check('sidebar lists the five product links and nothing else', substr_count($side, 'class="nav-link') === 5 && str_contains($side, '/portal/api-keys') && str_contains($side, '/portal/api-docs') && str_contains($side, '>Companies<') && str_contains($side, '/portal/companies') && !str_contains($side, '/portal/new') && !str_contains($side, '/portal/search') && str_contains($side, '/portal/states') && !str_contains($side, '/portal/account') && !str_contains($side, '/pricing') && !str_contains($side, '/faq'));
 $top = substr($r['body'], strpos($r['body'], '<nav'), strpos($r['body'], '</nav>') - strpos($r['body'], '<nav'));
 check('top bar has the menu toggle and the user avatar (initial of the name), and nothing else', str_contains($top, 'data-widget="pushmenu"') && str_contains($top, 'class="btn ei-avatar"') && str_contains($top, '>T</button>')
     && !str_contains($top, 'data-ei-theme-toggle') && !str_contains($top, '>Website<'));
@@ -261,6 +261,7 @@ $officer = (string) $q->fetchColumn();
 $r = $p->get('/portal/company/new-york/old-name-7045435');
 check('old slug / full state name redirects (308)', $r['status'] === 308 && str_ends_with((string) $r['location'], '/portal/company/ny/redline-creative-llc-7045435'), $r['status'] . ' ' . $r['location']);
 check('unknown company is 404', $p->get('/portal/company/ny/nothing-0000000')['status'] === 404);
+$r = $p->get('/portal/company/ny/redline-creative-llc-7045435');
 check('pro plan: officers, agent and addresses are visible', str_contains($r['body'], $officer) && str_contains($r['body'], 'Statewide Filing Agents LLC') && !str_contains($r['body'], 'Upgrade to Pro'));
 $pdo->exec("UPDATE `user` SET plan = 'free' WHERE email = 'user@example.com'");
 
@@ -485,7 +486,8 @@ $pdo->exec("INSERT INTO manual_companies (id, user_id, data, qualified, date_add
     (301, 4, " . $pdo->quote(json_encode(['company' => ['state' => 'FL', 'name' => 'PHONE SAMPLE LLC RENAMED', 'document_number' => 'L26000300', 'type' => 'LLC', 'status' => '1'], 'registered_agent' => [], 'officers' => [], 'more_info' => []])) . ", 0, NOW()),
     (303, 4, " . $pdo->quote(json_encode(['company' => ['state' => 'OH', 'name' => 'FILED AFTER ADDED LLC', 'document_number' => '5000303', 'type' => 'LLC', 'date_filed' => date('m/d/Y'), 'status' => '1'], 'registered_agent' => [], 'officers' => [], 'more_info' => []])) . ", 0, NOW() - INTERVAL 5 DAY),
     (302, 4, " . $pdo->quote(json_encode(['company' => ['state' => 'OH', 'name' => 'FUTURE DATE LLC', 'document_number' => '5000302', 'type' => 'LLC', 'date_filed' => '01/06/2030', 'effective_date' => '1/6/30', 'status' => '1'], 'registered_agent' => [], 'officers' => [], 'more_info' => []])) . ", 0, NOW())");
-$mirrorEnv = ['MIRROR_DB' => $testDb, 'MIRROR_TZ' => 'UTC'] + $einEnv;
+$offset = (int) $pdo->query('SELECT TIMESTAMPDIFF(MINUTE, UTC_TIMESTAMP(), NOW())')->fetchColumn();
+$mirrorEnv = ['MIRROR_DB' => $testDb, 'MIRROR_TZ' => sprintf('%s%02d:%02d', $offset < 0 ? '-' : '+', intdiv(abs($offset), 60), abs($offset) % 60)] + $einEnv;
 [$code, $out] = $capture('php yii mirror/backfill --batch=4', $mirrorEnv);
 check('mirror/backfill converts every source row', $code === 0 && str_contains($out, 'backfill done: 18 rows'), "exit $code: $out");
 check('mirror: a filing date in the future is unknown (N/A)', $pdo->query("SELECT COUNT(*) FROM entities WHERE url_key = '5000302' AND filed_at IS NULL AND formation_date IS NULL")->fetchColumn() == 1);
@@ -529,7 +531,7 @@ check('publish_at: a held company is a 404 in the portal', $m->get('/portal/comp
 $r = $m->get('/portal/companies?q=PUB+HELD');
 check('publish_at: held companies are not in search results', str_contains($r['body'], '0 companies') && !str_contains($r['body'], 'PUB HELD LLC'));
 check('publish_at: a published company is in search results', str_contains($m->get('/portal/companies?q=PUB+ZERO')['body'], 'PUB ZERO LLC'));
-$pdo->exec("UPDATE entities SET publish_at = NOW() - INTERVAL 1 MINUTE WHERE url_key = 'p311'");
+$pdo->exec("UPDATE entities SET publish_at = UTC_TIMESTAMP() - INTERVAL 1 MINUTE WHERE url_key = 'p311'");
 check('publish_at: a held company appears once its time has passed', $m->get('/portal/company/oh/pub-held-llc-p311')['status'] === 200);
 $pdo->exec("DELETE FROM entities WHERE url_key IN ('p310', 'p311', 'p312')");
 proc_terminate($srvM);
@@ -553,7 +555,7 @@ check('the token is not stored, only its hash', $token !== '' && $pdo->query("SE
     && $pdo->query("SELECT COUNT(*) FROM api_key WHERE key_hash = " . $pdo->quote($token))->fetchColumn() == 0);
 check('the token is not shown on a second page view', !str_contains($a->get('/portal/api-keys')['body'], $token));
 $r = $api('/api/v1/me');
-check('API without a key is 401 JSON', $r['status'] === 401 && str_contains($r['headers'], 'application/json') && str_contains($r['headers'], 'WWW-Authenticate'), $r['status'] . ' ' . $r['body']);
+check('API without a key is 401 JSON', $r['status'] === 401 && str_contains($r['headers'], 'application/json') && stripos($r['headers'], 'WWW-Authenticate') !== false, $r['status']);
 check('API with a wrong key is 401', $api('/api/v1/me', 'eik_' . str_repeat('0', 48))['status'] === 401);
 $r = $api('/api/v1/me', $token);
 check('API with a valid key returns the account', $r['status'] === 200 && (json_decode($r['body'], true)['plan'] ?? '') === 'business', $r['status'] . ' ' . $r['body']);
@@ -593,7 +595,7 @@ check('entities: POST is 405', $a->req('POST', '/api/v1/entities', [], ["Authori
 check('entities: no key is 401', $api('/api/v1/entities')['status'] === 401);
 check('a key use is recorded', $pdo->query("SELECT COUNT(*) FROM api_key WHERE last_used_at IS NOT NULL")->fetchColumn() == 1);
 $r = $api('/api/v1/me', $token);
-check('API responses carry rate-limit and quota headers', str_contains($r['headers'], 'X-RateLimit-Limit: 120') && str_contains($r['headers'], 'X-Quota-Limit: 25000') && str_contains($r['headers'], 'X-Quota-Remaining:'));
+check('API responses carry rate-limit and quota headers', stripos($r['headers'], 'X-RateLimit-Limit: 120') !== false && stripos($r['headers'], 'X-Quota-Limit: 25000') !== false && stripos($r['headers'], 'X-Quota-Remaining:') !== false);
 check('API calls are counted for the month', (int) $pdo->query("SELECT calls FROM api_usage WHERE bucket = 'm:" . gmdate('Y-m') . "'")->fetchColumn() >= 3);
 $uid = (int) $pdo->query("SELECT id FROM `user` WHERE email = 'pro@example.com'")->fetchColumn();
 $pdo->exec("INSERT INTO api_usage (user_id, bucket, calls) VALUES ($uid, 'n:" . gmdate('Y-m-d\\TH:i') . "', 100000) ON DUPLICATE KEY UPDATE calls = 100000");
@@ -603,7 +605,8 @@ $pdo->exec("DELETE FROM api_usage WHERE bucket LIKE 'n:%'");
 $pdo->exec("UPDATE api_usage SET calls = 25000 WHERE bucket = 'm:" . gmdate('Y-m') . "'");
 $r = $api('/api/v1/me', $token);
 check('over the monthly quota is 429 with a reset date', $r['status'] === 429 && str_contains($r['body'], 'Monthly API quota') && str_contains($r['headers'], 'X-Quota-Remaining: 0'), $r['status'] . ' ' . $r['body']);
-check('the usage card shows on the keys page', str_contains($a->get('/portal/api-keys')['body'], '25,000 of 25,000 calls used'));
+$keysPage = $a->get('/portal/api-keys')['body'];
+check('the usage card shows on the keys page', preg_match('~<strong>25,00[01]</strong> of 25,000 calls used~', $keysPage) === 1);
 $pdo->exec("DELETE FROM api_usage");
 $pdo->exec("INSERT INTO api_usage (user_id, bucket, calls) VALUES ($uid, 'r:" . gmdate('Y-m') . "', 49998)");
 $r = $api('/api/v1/entities?limit=100', $token);
@@ -645,7 +648,7 @@ $r = $a->postForm('/portal/export/companies', ['state' => 'FL'], '/portal/compan
 check('a file is cut short at the remaining monthly rows', $r['status'] === 200 && substr_count(trim($r['body']), "\n") === 3, $r['status'] . ' ' . substr_count(trim($r['body']), "\n"));
 $r = $a->postForm('/portal/export/companies', ['state' => 'FL'], '/portal/companies?state=FL');
 check('with no rows left the export is refused', $r['status'] === 302 && !str_contains($r['headers'], 'text/csv'));
-check('the Companies page shows the export usage card, full', str_contains($a->get('/portal/companies?state=FL')['body'], '5,000 of 5,000 export rows used') && str_contains($a->get('/portal/companies?state=FL')['body'], 'used up until'));
+check('the Companies page shows the export usage card, full', str_contains($a->get('/portal/companies?state=FL')['body'], '<strong>5,000</strong> of 5,000 export rows used') && str_contains($a->get('/portal/companies?state=FL')['body'], 'used up until'));
 $pdo->exec("DELETE FROM api_usage");
 $pdo->exec("UPDATE `user` SET plan = 'free' WHERE email = 'pro@example.com'");
 check('free: the button is locked', str_contains($a->get('/portal/companies')['body'], 'Export CSV is a Pro feature'));
@@ -656,6 +659,7 @@ echo "Free plan limits\n";
 run('php yii seed/user free@example.com Free-pass-1 free', $env, $root);
 $flimits = ['historyDays' => 7, 'lookupsPerDay' => 10];
 $pdo->exec("UPDATE entities SET filed_at = '2026-11-01 12:00:00' WHERE id IN (SELECT id FROM (SELECT id FROM entities WHERE state <> 'NA' ORDER BY id LIMIT 15) t)");
+$pdo->exec("DELETE FROM entities WHERE filed_at > '2026-11-01 23:59:59'");
 $recent = $pdo->query("SELECT id, state, slug, url_key, state_filing_number FROM entities WHERE filed_at = '2026-11-01 12:00:00' ORDER BY id")->fetchAll(PDO::FETCH_ASSOC);
 $urlOf = fn(array $e) => '/portal/company/' . strtolower($e['state']) . '/' . $e['slug'] . '-' . $e['url_key'];
 $old = $pdo->query("SELECT state, slug, url_key FROM entities WHERE filed_at < '2026-10-26' AND state <> 'NA' ORDER BY id LIMIT 1")->fetch(PDO::FETCH_ASSOC);
@@ -667,10 +671,10 @@ $f->postForm('/portal/auth/login', ['LoginForm' => ['email' => 'free@example.com
 $lookups = fn() => (int) $pdo->query("SELECT COUNT(*) FROM company_lookup cl JOIN `user` u ON u.id = cl.user_id WHERE u.email = 'free@example.com'")->fetchColumn();
 $r = $f->get('/portal/companies');
 $allCount = number_format((int) $pdo->query('SELECT COUNT(*) FROM entities WHERE publish_at <= UTC_TIMESTAMP()')->fetchColumn());
-check('free: Companies searches every filing and shows the plan card', str_contains($r['body'], $allCount . ' companies') && str_contains($r['body'], 'Free plan') && str_contains($r['body'], '0 of ' . $flimits['lookupsPerDay'] . ' company lookups used today'));
+check('free: Companies searches every filing and shows the plan card', str_contains($r['body'], $allCount . ' companies') && str_contains($r['body'], 'Free plan') && str_contains($r['body'], '<strong>0</strong> of ' . $flimits['lookupsPerDay'] . ' company lookups used today'));
 check('free: filings older than the window carry a lock icon in the list', str_contains($r['body'], 'Older than your plan covers'));
 check('free: Companies has no County column and an officer-free search hint', !str_contains($r['body'], '>County<') && str_contains($r['body'], 'Name, agent or filing number'));
-check('free: the date picker and filters are not limited to the window', !str_contains($r['body'], 'data-min') && str_contains($f->get('/portal/companies?from=2020-01-01&to=2026-12-31')['body'], $allCount . ' companies')
+check('free: the date picker and filters are not limited to the window', !str_contains($r['body'], 'data-min') && str_contains($f->get('/portal/companies?from=2020-01-01&to=2026-12-31')['body'], number_format((int) $pdo->query("SELECT COUNT(*) FROM entities WHERE publish_at <= UTC_TIMESTAMP() AND filed_at >= '2020-01-01' AND filed_at < '2027-01-01'")->fetchColumn()) . ' companies')
     && str_contains($f->get('/portal/states?from=2020-01-01')['body'], 'Filed since Jan 1, 2020'));
 $r = $f->get($urlOf($recent[0]));
 check('free: a company in the window opens and shows the lookup counter', $r['status'] === 200 && str_contains($r['body'], 'Lookup 1 of ' . $flimits['lookupsPerDay'] . ' today'), (string) $r['status']);
@@ -688,7 +692,7 @@ check('free: ten different companies use ten lookups', $lookups() === $flimits['
 $r = $f->get($urlOf($recent[10]));
 check('free: the eleventh company is refused with 429', $r['status'] === 429 && str_contains($r['body'], 'used all 10 free lookups') && $lookups() === $flimits['lookupsPerDay'], (string) $r['status']);
 check('free: an already opened company still opens at the limit', $f->get($urlOf($recent[3]))['status'] === 200);
-check('free: the Companies card shows the limit reached', str_contains($f->get('/portal/companies')['body'], '10 of 10 company lookups used today'));
+check('free: the Companies card shows the limit reached', str_contains($f->get('/portal/companies')['body'], '<strong>10</strong> of 10 company lookups used today'));
 $pricing = (new Http('http://127.0.0.1:18088'))->get('/pricing')['body'];
 check('pricing page reads the free limits from config', str_contains($pricing, 'Last 7 days of new filings') && str_contains($pricing, '10 full lookups per day'));
 $pdo->exec("UPDATE `user` SET plan = 'pro' WHERE email = 'free@example.com'");

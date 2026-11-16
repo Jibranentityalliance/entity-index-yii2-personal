@@ -19,8 +19,10 @@ mysql -e "CREATE DATABASE entityindex CHARACTER SET utf8mb4 COLLATE utf8mb4_unic
 php yii migrate --interactive=0   # create tables
 php yii seed/all                  # 51 jurisdictions + ~6,000 FAKE sample companies
 php yii seed/admin you@example.com 'a-long-password'
-php yii serve --router=config/dev-router.php   # http://localhost:8080
+PHP_CLI_SERVER_WORKERS=4 php yii serve --router=config/dev-router.php   # http://localhost:8080
 ```
+
+`php yii serve` runs PHP's built-in server, which handles one request at a time: while a large download (Bulk data) is running, every other page waits. `PHP_CLI_SERVER_WORKERS=4` starts four worker processes (PHP 7.4+). Apache with php-fpm has no such limit.
 
 `seed/sample` loads **generated sample data** (`data/sample/entities.json`), not real filings. Use `seed/states` alone in production.
 The real ingestion pipeline that fills `entities`, `people`, `filings`, … is a separate system and is not part of this repo.
@@ -70,6 +72,12 @@ Paid plans and admins get an **Export CSV** button on `/portal/companies`; it do
 
 **Export limits are not final and are meant to be changed.** They live in `config/params.php` under `exportLimits`, per plan (`pro`, `business`, `bulk`, `admin`): `monthlyRows` (rows exported a calendar month, UTC, counted separately from the API row cap; `null` is unlimited) and `perFile` (most rows in one download). A plan missing from the list cannot export. Current placeholders: Pro 5,000 rows a month, Business 50,000, Data license 1,000,000, admins unlimited, with files capped at the monthly amount (100,000 for Data license and admins). The pricing page text for Pro and Business reads these numbers. A file is cut short when fewer rows are left than it would contain, and the button is disabled once none are left. Usage is kept in `api_usage` under the `x:YYYY-MM` bucket.
 
+## Bulk data
+
+Data license (`bulk`) and admin accounts get a **Bulk data** page at `/portal/bulk`. `php yii bulk/build` (cron, once a day) writes one gzipped UTF-8 CSV with every published company and one per state (the same columns as the CSV export, rows in import order, held companies left out), records each file's row count, size and SHA-256 in `bulk_file`, and keeps the last `keepDays` daily builds (7) before deleting older files. The page lists the builds by date with a Download button per file; the download goes through `/portal/bulk/download?id=...`, which checks the plan and the daily download cap (`downloadsPerDay`, 20, admins unlimited; a resumed download does not count again), writes a `bulk_download` row and then hands the file over. Files live outside the web root (`BULK_DIR`, default `runtime/bulk`), never at a public URL.
+
+Settings are in `config/params.php` under `bulk` and are not final: `keepDays`, `downloadsPerDay`, plus `dir` and `sendfile` from the environment. Delivery has two modes. `php` (default) streams the file from PHP and holds one PHP worker per download, which is fine for a few customers and bad for many. `xsendfile` makes PHP only send an `X-Sendfile` header after the checks and lets Apache's `mod_xsendfile` send the file itself, with resume support; set it up as described in docs/DEPLOY.md section 7d. Storage sits behind the `BulkStore` interface (`services/bulk`), so moving to S3 or R2 means writing a second store that uploads in `put()` and redirects to a signed URL in `send()`. The files are CSV only for now; the pricing page still mentions Parquet and S3/SFTP delivery.
+
 ## API (v1)
 
 Customer-facing documentation is the portal page `/portal/api-docs` (`modules/portal/views/api-docs/index.php`); update it when endpoints or parameters change.
@@ -96,6 +104,8 @@ List filters: `q`, `state` (2 letters), `type`, `status`, `county`, `filed_after
 | `SITE_URL` | **required**: canonical URL used in sitemaps, canonical links, JSON-LD |
 | `ENV_FILE` | optional (real environment only): path of the env file, default `./.env` |
 | `SITE_NOINDEX` | `true` (default): meta robots tag + `X-Robots-Tag: noindex, nofollow` on every response. Set `false` at launch |
+| `BULK_DIR` | optional: folder for the bulk data files, default `runtime/bulk`; keep it outside the web root |
+| `BULK_SENDFILE` | `php` (default: PHP streams the file) or `xsendfile` (Apache `mod_xsendfile` sends it; see docs/DEPLOY.md 7d) |
 | `SITE_MODE` | `live`, or `coming_soon` to show only the waitlist page (opt-out, legal pages and the form APIs stay reachable) |
 
 The site will not start if a required setting is missing: it shows a "Configuration error" page, logs the cause to `runtime/logs/config-error.log`, and `php yii env/check` lists what is missing (never printing values). `.env` must be readable by the web server user (`chmod 640`, group `www-data`).

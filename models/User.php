@@ -106,6 +106,11 @@ class User extends ActiveRecord implements IdentityInterface
         return $this->isAdmin() || isset($limits[$this->plan]);
     }
 
+    public function hasBulkAccess(): bool
+    {
+        return $this->isAdmin() || $this->plan === 'bulk';
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === self::ROLE_ADMIN;

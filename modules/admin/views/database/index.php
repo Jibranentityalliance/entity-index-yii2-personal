@@ -69,11 +69,11 @@ $this->registerJs("$('#select-all').on('change', function () { $('.row-select').
     <?= $stat('Queued changes', Fmt::num($s['queued_changes']), $s['queued_since'] ? 'Oldest ' . $when($s['queued_since']) : 'Queue is empty') ?>
 </div>
 
-<ul class="nav nav-pills mb-3">
+<div class="d-flex flex-wrap mb-2">
     <?php foreach ($tabs as $key => [$label, $count]): ?>
-        <li class="nav-item"><a class="nav-link<?= $show === $key ? ' active' : '' ?>" href="<?= Url::to(['/admin/database/index', 'show' => $key, 'q' => $q]) ?>"><?= Html::encode($label) ?> <span class="badge badge-light"><?= Fmt::num($key === $show ? $total : $count) ?></span></a></li>
+        <a class="btn btn-sm mr-2 mb-2 <?= $show === $key ? 'btn-primary' : 'btn-default' ?>" href="<?= Url::to(['/admin/database/index', 'show' => $key, 'q' => $q]) ?>"><?= Html::encode($label) ?> <span class="badge badge-light ml-1"><?= Fmt::num($key === $show ? $total : $count) ?></span></a>
     <?php endforeach ?>
-</ul>
+</div>
 
 <div class="card">
     <form action="<?= Url::to(['/admin/database/index']) ?>" class="card-body ei-filters">

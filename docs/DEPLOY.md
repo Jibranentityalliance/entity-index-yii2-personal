@@ -183,6 +183,67 @@ backfill so changes made while it runs are queued and applied afterwards.
 the dashboard's "Structured addresses" card counts. Companies converted before that migration get them by converting
 everything again: `nohup sudo -u www-data php yii mirror/backfill --restart > runtime/logs/backfill.log 2>&1 &`.
 
+## 7d. Bulk data files (cron, and optional Apache sendfile)
+
+`php yii bulk/build` writes the daily bulk files for Data license accounts (see the Bulk data section of the README). It reads every published
+company in id order and writes gzipped CSVs, so it takes minutes and some CPU on millions of rows: run it when the site is quiet.
+
+```bash
+sudo -u daemon php yii migrate --interactive=0       # bulk_file, bulk_download (www-data on Debian)
+sudo -u daemon php yii bulk/build                      # first build; prints the row count and size
+```
+
+```cron
+30 3 * * * cd /opt/bitnami/entityindex && php yii bulk/build >> runtime/logs/bulk.log 2>&1
+```
+
+Files go to `runtime/bulk/YYYY-MM-DD/` (or `BULK_DIR`) and are never served directly. Disk use is about `keepDays` (7) times one day's
+files, so check `du -sh runtime/bulk` after the first build and lower `keepDays` in `config/params.php` if space is tight.
+Run the cron job as the same user as the web server so the files are readable by it.
+
+**Downloads without any setup** work out of the box (`BULK_SENDFILE=php`): PHP streams each file. That ties up one PHP worker per running
+download, so a handful of simultaneous downloads is fine, but tens of large ones can starve the site. The per-user daily cap limits the damage.
+
+**Hand the file to Apache instead (`BULK_SENDFILE=xsendfile`).** PHP then only checks the plan and returns an `X-Sendfile` header, and
+`mod_xsendfile` sends the file, freeing the PHP worker at once and supporting resume. Apache has no built-in equivalent, so the module
+has to be installed once:
+
+Debian/Ubuntu:
+
+```bash
+sudo apt install libapache2-mod-xsendfile
+sudo a2enmod xsendfile
+```
+
+Bitnami (Lightsail LAMP), where Apache is built from source and has no package for it:
+
+```bash
+sudo apt install build-essential unzip curl
+curl -L -o mod_xsendfile.zip https://github.com/nmaier/mod_xsendfile/archive/refs/heads/master.zip
+unzip mod_xsendfile.zip && cd mod_xsendfile-master
+sudo /opt/bitnami/apache/bin/apxs -cia mod_xsendfile.c      # compiles, installs and adds the LoadModule line
+```
+
+Then in the site's virtual host (`entityindex-vhost.conf` and the `-https-vhost.conf` twin), next to `DocumentRoot`:
+
+```apache
+XSendFile On
+XSendFilePath /opt/bitnami/entityindex/runtime/bulk
+```
+
+Use the real absolute path of `BULK_DIR` (`/var/www/entityindex/runtime/bulk` on Debian). `XSendFilePath` is mandatory: without it Apache
+refuses every file with a 404. Restart Apache (`sudo /opt/bitnami/ctlscript.sh restart apache`, or `sudo systemctl restart apache2`),
+set `BULK_SENDFILE=xsendfile` in `.env` and run `php yii cache/flush-all`.
+
+Check it as a Data license or admin user: download a file in the browser, and watch `top` or the PHP-FPM status while it runs; the PHP
+worker is released as soon as the response starts. If the browser gets an empty or 404 response, the path in `XSendFilePath` is wrong or the
+web user cannot read `runtime/bulk`. If it downloads an empty file named like the page, the module is not loaded (`apachectl -M | grep xsendfile`).
+Setting `BULK_SENDFILE=php` again always works as a fallback.
+
+The Lightsail plan's monthly transfer allowance is the real limit for downloads: a 5 GB national file downloaded by ten customers is 50 GB.
+Check the plan's allowance in the Lightsail console before promising daily downloads, and see `BulkStore` in the README for moving the
+files to S3 or R2 when that becomes the constraint.
+
 ## 8. Launch checklist
 
 1. `SITE_MODE=coming_soon` until the real data pipeline is loading; check `/coming-soon`, `/opt-out`, `/legal/terms`.

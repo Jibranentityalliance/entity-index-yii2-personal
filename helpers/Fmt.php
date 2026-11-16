@@ -66,6 +66,16 @@ class Fmt
         return number_format((float) $n);
     }
 
+    public static function bytes(int $n): string
+    {
+        return match (true) {
+            $n >= 1073741824 => number_format($n / 1073741824, 2) . ' GB',
+            $n >= 1048576 => number_format($n / 1048576, 1) . ' MB',
+            $n >= 1024 => number_format($n / 1024) . ' KB',
+            default => $n . ' B',
+        };
+    }
+
     public static function lagHours(string $filedAt, string $indexedAt): float
     {
         return (self::utc($indexedAt)->getTimestamp() - self::utc($filedAt)->getTimestamp()) / 3600;
