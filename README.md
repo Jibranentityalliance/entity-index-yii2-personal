@@ -45,6 +45,11 @@ The portal UI uses stock AdminLTE 3 / Bootstrap 4 components (info-box, card, ca
 
 `php yii seed/admin you@example.com 'password'` creates an admin. Paid plans are set on the `user.plan` column (`free|pro|business|bulk`) until billing exists.
 API keys and the read-only REST API are documented in the **API** section below.
+
+## Admin module
+
+`/admin` (module `app\modules\admin`, same layout as the portal) is for accounts with `role = admin`; guests go to the sign-in page and other users get a 403. Admins see a Database item in the sidebar. `/admin/database` reads only the portal's own tables, never `MIRROR_DB`. It shows how many companies are published, in cooldown (`publish_at` in the future) and held (`publish_at` NULL), when the next one goes live and how many go live within 1 and 24 hours, plus the import state (last company converted, backfill position, queued changes). Below, a paged live list of the companies in cooldown, soonest first, with the time each goes live and a countdown, a tab for held companies and a tab for published ones, all searchable by company name (starts with) or filing number. **Hold and release:** tick companies and press Release now (sets `publish_at` to now) or Hold (clears it, so the company disappears from the portal, search, API, CSV export and bulk files). The choice is stored in `entities.publish_override` (`hold` or `release`, with who and when) and a later sync from the source never changes `publish_at` for a company that has one, so a manual hold stays held until an admin releases it. Rows with a manual choice show a badge. Up to 500 companies per action. The totals are cached for 5 minutes (`Refresh now` bypasses it); the lists are not. New admin pages go in `modules/admin/controllers` and extend `AdminController`.
+
 Not built yet: saved searches, billing (Stripe is a placeholder), admin queues for contact / opt-out / waitlist.
 
 ## Publishing rules (held companies)

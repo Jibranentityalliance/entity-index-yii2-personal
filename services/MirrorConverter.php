@@ -183,7 +183,9 @@ class MirrorConverter
         $guard = 'VALUES(source_id) >= COALESCE(source_id, 0)';
         $updates = [];
         foreach ($cols as $col) {
-            if ($col !== 'source_id' && $col !== 'state' && $col !== 'url_key') {
+            if ($col === 'publish_at') {
+                $updates[] = "publish_at = IF($guard AND publish_override IS NULL, VALUES(publish_at), publish_at)";
+            } elseif ($col !== 'source_id' && $col !== 'state' && $col !== 'url_key') {
                 $updates[] = "$col = IF($guard, VALUES($col), $col)";
             }
         }

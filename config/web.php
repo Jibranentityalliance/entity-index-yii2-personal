@@ -22,6 +22,9 @@ $config = [
         'apiv1' => [
             'class' => \app\modules\apiv1\Module::class,
         ],
+        'admin' => [
+            'class' => \app\modules\admin\Module::class,
+        ],
     ],
     'components' => [
         'request' => [
@@ -101,6 +104,10 @@ $config = [
                 'portal/company/<state:[A-Za-z0-9-]+>/<slug:[A-Za-z0-9-]+>' => 'portal/company/view',
                 'portal/<controller:[\w-]+>' => 'portal/<controller>/index',
                 'portal/<controller:[\w-]+>/<action:[\w-]+>' => 'portal/<controller>/<action>',
+
+                'admin' => 'admin/default/index',
+                'admin/<controller:[\w-]+>' => 'admin/<controller>/index',
+                'admin/<controller:[\w-]+>/<action:[\w-]+>' => 'admin/<controller>/<action>',
             ],
         ],
     ],
