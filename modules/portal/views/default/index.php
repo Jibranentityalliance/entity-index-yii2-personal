@@ -3,6 +3,7 @@
 /** @var yii\web\View $this */
 /** @var array $stats */
 /** @var array{from:?string,to:?string,companies:int,states:int,addresses:int} $week */
+/** @var array[] $limits label and used/limit pairs */
 
 use app\helpers\Fmt;
 use app\helpers\States;
@@ -23,7 +24,7 @@ $top = array_slice($top, 0, 10);
         ['fa-map-marker-alt', 'Structured addresses', Fmt::num($week['addresses']), null],
     ] as [$icon, $label, $value, $route]): ?>
         <div class="col-sm-6 col-lg-3">
-            <div class="info-box">
+            <div class="info-box ei-info-box-fill">
                 <span class="info-box-icon"><i class="fas <?= $icon ?>"></i></span>
                 <div class="info-box-content">
                     <span class="info-box-text"><?php if ($route): ?><a href="<?= Url::to($route) ?>" class="text-reset stretched-link"><?= Html::encode($label) ?></a><?php else: ?><?= Html::encode($label) ?><?php endif ?></span>
@@ -33,11 +34,13 @@ $top = array_slice($top, 0, 10);
         </div>
     <?php endforeach ?>
     <div class="col-sm-6 col-lg-3">
-        <div class="info-box ei-info-box-placeholder">
-            <span class="info-box-icon"><i class="fas fa-plus"></i></span>
+        <div class="info-box ei-info-box-fill">
+            <span class="info-box-icon"><i class="fas fa-tachometer-alt"></i></span>
             <div class="info-box-content">
-                <span class="info-box-text text-muted">More metrics</span>
-                <span class="info-box-number text-muted">Coming soon</span>
+                <span class="info-box-text">Your limits</span>
+                <?php foreach ($limits as [$label, $value]): ?>
+                    <div class="ei-limit-row"><span><?= Html::encode($label) ?></span><span class="ei-limit-dots"></span><span class="ei-limit-value"><?= Html::encode($value) ?></span></div>
+                <?php endforeach ?>
             </div>
         </div>
     </div>

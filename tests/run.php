@@ -223,7 +223,7 @@ check('ei_theme=system renders dark and syncs to the device before paint', str_c
 $lr = (new Http('http://127.0.0.1:18080'))->req('GET', '/portal/auth/login', [], ['Cookie: ei_theme=light']);
 check('sign-in page follows the theme cookie', str_contains($lr['body'], 'ei-light') && str_contains($lr['body'], 'data-ei-theme-toggle'));
 check('unknown theme cookie falls back to dark', str_contains((new Http('http://127.0.0.1:18080'))->req('GET', '/portal/auth/login', [], ['Cookie: ei_theme=<x>'])['body'], 'dark-mode'));
-check('dashboard shows the 7-day overview and the top 10 states, and nothing else', str_contains($r['body'], 'Structured addresses') && str_contains($r['body'], 'ei-info-box-placeholder')
+check('dashboard shows the 7-day overview, the plan limits and the top 10 states', str_contains($r['body'], 'Structured addresses') && str_contains($r['body'], 'Your limits') && !str_contains($r['body'], 'Coming soon')
     && str_contains($r['body'], 'Top 10 states') && substr_count($r['body'], '<tr>') <= 11 && !str_contains($r['body'], 'Newest filings') && !str_contains($r['body'], 'ei-state-grid'));
 $r = $p->get('/portal/companies?q=7045435');
 check('filing number search finds Redline Creative LLC', str_contains($r['body'], 'Redline Creative LLC') && str_contains($r['body'], '1 company'));

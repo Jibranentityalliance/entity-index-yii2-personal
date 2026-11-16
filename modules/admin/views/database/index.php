@@ -17,9 +17,9 @@ use yii\helpers\Url;
 $this->title = 'Database';
 $s = $summary;
 $now = time();
-$stat = fn(string $label, $value, string $hint = '') => '<div class="col-sm-6 col-lg-3"><div class="card"><div class="card-body">'
+$stat = fn(string $label, $value, string $hint = '', bool $small = false) => '<div class="col-sm-6 col-lg-3"><div class="card ei-card-fill"><div class="card-body">'
     . '<div class="text-muted">' . Html::encode($label) . '</div>'
-    . '<div class="h3 mb-0">' . Html::encode($value) . '</div>'
+    . '<div class="' . ($small ? 'h5' : 'h3') . ' mb-0">' . Html::encode($value) . '</div>'
     . ($hint !== '' ? '<small class="text-muted">' . Html::encode($hint) . '</small>' : '')
     . '</div></div></div>';
 $when = fn(?string $v) => $v ? Fmt::dateTime($v) : 'Never';
@@ -62,10 +62,10 @@ $this->registerJs("$('#select-all').on('change', function () { $('.row-select').
     <?= $stat('Next release', $s['next_release_at'] ? $in($s['next_release_at']) : 'None', $s['next_release_at'] ? Fmt::dateTime($s['next_release_at']) : '') ?>
     <?= $stat('Going live within 1 hour', Fmt::num($s['live_within_1h'])) ?>
     <?= $stat('Going live within 24 hours', Fmt::num($s['live_within_24h'])) ?>
-    <?= $stat('Last company converted', $when($s['last_converted_at']), 'Newest indexed: ' . $when($s['newest_indexed_at'])) ?>
+    <?= $stat('Last company converted', $when($s['last_converted_at']), 'Newest indexed: ' . $when($s['newest_indexed_at']), true) ?>
 </div>
 <div class="row">
-    <?= $stat('Backfill position', 'Source id ' . Fmt::num($s['cursor_id']), 'Updated ' . $when($s['cursor_at'])) ?>
+    <?= $stat('Backfill position', 'Source id ' . Fmt::num($s['cursor_id']), 'Updated ' . $when($s['cursor_at']), true) ?>
     <?= $stat('Queued changes', Fmt::num($s['queued_changes']), $s['queued_since'] ? 'Oldest ' . $when($s['queued_since']) : 'Queue is empty') ?>
 </div>
 
