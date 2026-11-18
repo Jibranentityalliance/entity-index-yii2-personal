@@ -1,51 +1,53 @@
-/*
- * EntityIndex portal theme on top of AdminLTE 3 (body.ei-portal): dark by default, light with body.ei-light.
- * Dark also sets AdminLTE's own dark-mode class; the toggle in the top bar swaps both (js/portal.js).
- * Midnight canvas, monochrome surfaces separated by hairline borders (no shadows), and one green
- * reserved for primary actions, the logo and the active nav item. Pills for buttons/tags, 16px cards, 8px inputs.
- */
 :root {
-  /* brand greens: the same in both themes */
-  --ei-green: #3ecf8e;        /* phosphor green: logo, active nav, focus border, primary CTA border */
-  --ei-forest: #1f4b37;       /* CTA hover border */
-  --ei-emerald: #006239;      /* CTA fill (keeps the white label readable) */
-  --ei-on-accent: #fafafa;    /* label on the CTA fill */
   --ei-font: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --ei-mono: 'Source Code Pro', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  --ei-r-card: 16px;
+  --ei-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --ei-r-card: 8px;
   --ei-r-input: 8px;
   --ei-r-pill: 9999px;
+  --ei-orange: #ec652b;
 }
-/* Dark (default): midnight canvas. */
 .ei-portal {
-  --ei-bg: #121212;           /* obsidian: page canvas and cards */
-  --ei-surface: #242424;      /* ash: raised tier, hover, callouts */
-  --ei-border: #2e2e2e;       /* charcoal: card and component edges */
-  --ei-border-input: #393939; /* slate: inputs, ghost buttons */
-  --ei-border-strong: #4d4d4d;/* graphite: hover borders, muted tags */
-  --ei-text: #fafafa;         /* snow */
-  --ei-text-2: #b4b4b4;       /* silver mist: nav, secondary */
-  --ei-text-3: #898989;       /* smoke: captions, metadata */
-  --ei-link: #00c573;         /* mint pulse */
-  --ei-accent: #3ecf8e;       /* green as text or icon */
-  --ei-accent-border: #1f4b37;
+  --ei-canvas: #04050b;
+  --ei-bg: #090b16;
+  --ei-surface: #111526;
+  --ei-border: #1a1f33;
+  --ei-border-input: #262c45;
+  --ei-border-strong: #3a4160;
+  --ei-text: #f3f4fa;
+  --ei-text-2: #bcc1dc;
+  --ei-text-3: #8a90b3;
+  --ei-link: #6aa6ff;
+  --ei-accent: #6aa6ff;
+  --ei-green: #6aa6ff;
+  --ei-accent-soft: rgba(106, 166, 255, .12);
+  --ei-accent-border: rgba(106, 166, 255, .35);
+  --ei-primary: #f3f4fa;
+  --ei-primary-hover: #ffffff;
+  --ei-on-primary: #111a4a;
   --ei-hover: rgba(255, 255, 255, .04);
+  --ei-shadow: 0 1px 2px rgba(0, 0, 0, .2), 0 12px 32px rgba(0, 0, 0, .25);
   color-scheme: dark;
 }
-/* Light: same structure and green, inverted greys; green text darkens so it stays readable on white. */
 .ei-portal.ei-light {
+  --ei-canvas: #f6f6f8;
   --ei-bg: #ffffff;
-  --ei-surface: #f6f6f6;
-  --ei-border: #e6e6e6;
-  --ei-border-input: #d4d4d4;
-  --ei-border-strong: #b4b4b4;
-  --ei-text: #171717;
-  --ei-text-2: #4d4d4d;
-  --ei-text-3: #707070;
-  --ei-link: #006239;
-  --ei-accent: #006239;
-  --ei-accent-border: #3ecf8e;
-  --ei-hover: rgba(0, 0, 0, .03);
+  --ei-surface: #f3f4f7;
+  --ei-border: #e4e5ec;
+  --ei-border-input: #cfd1dc;
+  --ei-border-strong: #a9adc2;
+  --ei-text: #111a4a;
+  --ei-text-2: #3d4466;
+  --ei-text-3: #6b7089;
+  --ei-link: #1f62d0;
+  --ei-accent: #1f62d0;
+  --ei-green: #1f62d0;
+  --ei-accent-soft: #e8f0fd;
+  --ei-accent-border: #bcd3f6;
+  --ei-primary: #111a4a;
+  --ei-primary-hover: #1d2863;
+  --ei-on-primary: #ffffff;
+  --ei-hover: rgba(17, 26, 74, .03);
+  --ei-shadow: 0 1px 2px rgba(17, 26, 74, .04), 0 12px 32px rgba(17, 26, 74, .08);
   color-scheme: light;
 }
 
@@ -55,36 +57,34 @@ body.ei-portal {
   color: var(--ei-text);
   font-family: var(--ei-font);
   font-size: 14px;
-  line-height: 1.43;
-  letter-spacing: -0.007em;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 .ei-portal h1, .ei-portal h2, .ei-portal h3, .ei-portal h4, .ei-portal h5, .ei-portal h6,
 .ei-portal .h1, .ei-portal .h2, .ei-portal .h3, .ei-portal .h4, .ei-portal .h5, .ei-portal .h6 {
   color: var(--ei-text);
   font-family: var(--ei-font);
-  font-weight: 400;
-  letter-spacing: -0.007em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
-.ei-portal .h6, .ei-portal h6 { font-size: 16px; font-weight: 500; }
-.ei-portal b, .ei-portal strong, .ei-portal .font-weight-bold, .ei-portal .font-weight-bolder, .ei-portal dt { font-weight: 500 !important; }
+.ei-portal .h6, .ei-portal h6 { font-size: 16px; }
+.ei-portal b, .ei-portal strong, .ei-portal .font-weight-bold, .ei-portal .font-weight-bolder, .ei-portal dt { font-weight: 600 !important; }
 .ei-portal .text-muted { color: var(--ei-text-3) !important; }
 .ei-portal .small, .ei-portal small { font-size: 12px; }
 .ei-portal hr { border-top-color: var(--ei-border); }
 .ei-portal .text-monospace, .ei-portal code {
   font-family: var(--ei-mono) !important;
   font-size: 12px;
-  letter-spacing: .1em;
   color: var(--ei-text-2);
 }
 .ei-portal a:not(.btn):not(.nav-link):not(.brand-link):not(.text-reset):not(.dropdown-item) { color: var(--ei-link); }
 .ei-portal a:not(.btn):not(.nav-link):not(.brand-link):not(.text-reset):not(.dropdown-item):hover { color: var(--ei-accent); text-decoration: none; }
-.ei-portal ::selection { background: var(--ei-emerald); color: var(--ei-on-accent); }
+.ei-portal ::selection { background: var(--ei-accent); color: #fff; }
 .ei-portal *:focus-visible { outline: 1px solid var(--ei-green); outline-offset: 2px; }
-.ei-portal { scrollbar-color: var(--ei-border-strong) var(--ei-bg); }
+.ei-portal { scrollbar-color: var(--ei-border-strong) var(--ei-canvas); }
 
 /* ---------- shell: top bar, sidebar, content, footer ---------- */
-.ei-portal .wrapper, .ei-portal .content-wrapper { background: var(--ei-bg); }
+.ei-portal .wrapper, .ei-portal .content-wrapper { background: var(--ei-canvas); }
 .ei-portal .main-header.navbar {
   background: var(--ei-bg);
   border-bottom: 1px solid var(--ei-border);
@@ -122,10 +122,9 @@ body.ei-portal {
   padding: 6px;
   background: var(--ei-bg);
   border: 1px solid var(--ei-border);
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .24);
+  border-radius: var(--ei-r-card);
+  box-shadow: var(--ei-shadow);
 }
-.ei-portal.ei-light .ei-user-menu .dropdown-menu { box-shadow: 0 8px 24px rgba(0, 0, 0, .08); }
 .ei-portal .ei-user-menu-head { display: flex; align-items: center; gap: 10px; padding: 8px 10px; }
 .ei-portal .ei-user-menu-who { display: flex; flex-direction: column; min-width: 0; }
 .ei-portal .ei-user-menu-name { color: var(--ei-text); font-size: 14px; font-weight: 500; }
@@ -179,8 +178,7 @@ body.ei-portal {
   border-bottom: 1px solid var(--ei-border) !important;
   color: var(--ei-text) !important;
 }
-.ei-portal .brand-link .brand-text { font-size: 16px; font-weight: 500 !important; letter-spacing: -0.007em; }
-.ei-logo-mark { flex: 0 0 auto; display: block; }
+.ei-portal .brand-link .brand-text { font-size: 19px; font-weight: 700 !important; letter-spacing: -0.03em; margin-left: 0 !important; }
 .ei-portal .sidebar { padding: 0 12px; }
 .ei-portal .nav-sidebar > .nav-item { margin-bottom: 2px; }
 .ei-portal .nav-sidebar > .nav-item > .nav-link {
@@ -192,14 +190,15 @@ body.ei-portal {
 .ei-portal .nav-sidebar > .nav-item > .nav-link .nav-icon { color: var(--ei-text-3); font-size: 14px; }
 .ei-portal .nav-sidebar > .nav-item > .nav-link:hover { color: var(--ei-text); background: var(--ei-hover); }
 .ei-portal .main-sidebar .nav-sidebar > .nav-item > .nav-link.active {
-  background: var(--ei-surface);
+  background: var(--ei-accent-soft);
   color: var(--ei-text);
-  box-shadow: inset 2px 0 0 var(--ei-green);
+  font-weight: 600;
+  box-shadow: none;
 }
 .ei-portal .main-sidebar .nav-sidebar > .nav-item > .nav-link.active .nav-icon { color: var(--ei-accent); }
 
 .ei-portal .content-header { padding: 32px 8px 16px; }
-.ei-portal .content-header h1 { font-size: 24px; line-height: 1.33; margin: 0; }
+.ei-portal .content-header h1 { font-size: 30px; line-height: 1.2; letter-spacing: -0.03em; margin: 0; }
 .ei-portal .content { padding-bottom: 64px; }
 .ei-portal .main-footer {
   background: var(--ei-bg);
@@ -222,7 +221,7 @@ body.ei-portal {
   border-bottom: 1px solid var(--ei-border);
   padding: 16px 24px;
 }
-.ei-portal .card-title { font-size: 16px; font-weight: 500; color: var(--ei-text); }
+.ei-portal .card-title { font-size: 16px; font-weight: 600; color: var(--ei-text); }
 .ei-portal .card-tools { font-size: 14px; }
 .ei-portal .card-body { padding: 24px; }
 .ei-portal .card-body.p-0 { padding: 0; }
@@ -238,16 +237,15 @@ body.ei-portal {
   color: var(--ei-text);
   border: 1px solid var(--ei-border);
   border-radius: var(--ei-r-card);
-  box-shadow: none;
+  box-shadow: var(--ei-shadow);
 }
-.ei-portal.ei-light .modal-content { box-shadow: 0 8px 24px rgba(0, 0, 0, .08); }
 .ei-portal .modal-header {
   background: transparent;
   border-bottom: 1px solid var(--ei-border);
   padding: 16px 24px;
   align-items: center;
 }
-.ei-portal .modal-title { font-size: 16px; font-weight: 500; color: var(--ei-text); }
+.ei-portal .modal-title { font-size: 16px; font-weight: 600; color: var(--ei-text); }
 .ei-portal .modal-body { padding: 24px; }
 .ei-portal .modal-footer {
   background: transparent;
@@ -285,7 +283,7 @@ body.ei-portal {
 .ei-portal .ei-summary dt { color: var(--ei-text-3); font-weight: 400 !important; }
 .ei-portal .ei-summary dt::after { content: ': '; }
 .ei-portal .ei-summary dd::after { content: ''; display: block; }
-.ei-portal .ei-big-number { font-size: 28px; font-weight: 500; letter-spacing: -0.02em; color: var(--ei-text); line-height: 1.1; }
+.ei-portal .ei-big-number { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; color: var(--ei-text); line-height: 1.1; }
 
 /* ---------- stat tiles (info-box) ---------- */
 .ei-portal .info-box {
@@ -303,49 +301,47 @@ body.ei-portal {
   width: 40px;
   height: 40px;
   border-radius: var(--ei-r-input);
-  background: var(--ei-surface) !important;
-  border: 1px solid var(--ei-border);
+  background: var(--ei-accent-soft) !important;
+  border: 0;
   color: var(--ei-accent) !important;
   font-size: 16px;
   box-shadow: none;
   align-self: flex-start;
 }
 .ei-portal .info-box .info-box-content { padding: 0 0 0 16px; }
-.ei-portal .info-box .info-box-text { color: var(--ei-text-3); font-size: 12px; line-height: 1.5; }
+.ei-portal .info-box .info-box-text { color: var(--ei-text-3); font-size: 13px; line-height: 1.5; }
 .ei-portal .info-box.ei-info-box-fill { height: calc(100% - 1rem); }
 .ei-portal .card.ei-card-fill { height: calc(100% - 1rem); }
 .ei-portal .ei-limit-row { display: flex; align-items: baseline; font-size: 13px; line-height: 1.6; color: var(--ei-text); }
-.ei-portal .ei-limit-dots { flex: 1 1 auto; margin: 0 8px; border-bottom: 1px dotted var(--ei-border-input); transform: translateY(-3px); }
+.ei-portal .ei-limit-dots { flex: 1 1 auto; margin: 0 8px; border-bottom: 1px dotted var(--ei-border-strong); transform: translateY(-3px); }
 .ei-portal .ei-limit-value { font-variant-numeric: tabular-nums; }
-.ei-portal .info-box .info-box-number { color: var(--ei-text); font-size: 24px; line-height: 1.33; font-weight: 400; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.ei-portal .info-box .info-box-number { color: var(--ei-text); font-size: 26px; line-height: 1.3; font-weight: 600; letter-spacing: -0.025em; margin-top: 4px; font-variant-numeric: tabular-nums; }
 
-/* ---------- buttons: pills ---------- */
+/* ---------- buttons ---------- */
 .ei-portal .btn {
-  border-radius: var(--ei-r-pill);
+  border-radius: var(--ei-r-input);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.43;
   padding: 8px 16px;
   box-shadow: none !important;
-  letter-spacing: -0.007em;
 }
 .ei-portal .btn-sm { font-size: 12px; padding: 4px 12px; }
 .ei-portal .btn-lg { font-size: 16px; padding: 10px 24px; }
 .ei-portal .btn-primary,
 .ei-portal .btn-primary:not(:disabled):not(.disabled):active {
-  background: var(--ei-emerald);
-  border: 1px solid var(--ei-green);
-  color: var(--ei-on-accent);
+  background: var(--ei-primary);
+  border: 1px solid var(--ei-primary);
+  color: var(--ei-on-primary);
 }
 .ei-portal .btn-primary:hover,
-.ei-portal .btn-primary:focus { background: var(--ei-emerald); border-color: var(--ei-forest); color: var(--ei-on-accent); }
+.ei-portal .btn-primary:focus { background: var(--ei-primary-hover); border-color: var(--ei-primary-hover); color: var(--ei-on-primary); }
 .ei-portal .btn-default,
 .ei-portal .btn-outline-secondary,
 .ei-portal .btn-secondary {
   background: transparent;
   border: 1px solid var(--ei-border-input);
   color: var(--ei-text);
-  font-weight: 400;
 }
 .ei-portal .btn-default:hover,
 .ei-portal .btn-outline-secondary:hover,
@@ -361,7 +357,7 @@ body.ei-portal {
 .ei-portal .btn-link.p-0 { padding: 0; border-radius: 0; }
 
 /* ---------- forms ---------- */
-.ei-portal label:not(.form-check-label):not(.custom-file-label) { color: var(--ei-text-2); font-size: 14px; font-weight: 400; margin-bottom: 8px; }
+.ei-portal label:not(.form-check-label):not(.custom-file-label) { color: var(--ei-text); font-size: 14px; font-weight: 600; margin-bottom: 6px; }
 .ei-portal .form-control:not(.form-control-navbar):not(.form-control-sidebar),
 .ei-portal .custom-select,
 .ei-portal select.form-control {
@@ -379,9 +375,9 @@ body.ei-portal {
 .ei-portal .form-control:not(.form-control-navbar):not(.form-control-sidebar):focus,
 .ei-portal .custom-select:focus {
   background-color: var(--ei-bg);
-  border-color: var(--ei-green);
+  border-color: var(--ei-text);
   color: var(--ei-text);
-  box-shadow: none;
+  box-shadow: 0 0 0 3px var(--ei-accent-soft);
   outline: 0;
 }
 .ei-portal .form-control:not(.form-control-navbar):disabled,
@@ -404,9 +400,10 @@ body.ei-portal {
   border-top: 0;
   border-bottom: 1px solid var(--ei-border);
   color: var(--ei-text-3);
-  font-size: 12px;
-  font-weight: 400;
+  font-size: 13px;
+  font-weight: 600;
   white-space: nowrap;
+  background: var(--ei-canvas);
 }
 .ei-portal .table-hover tbody tr:hover { background: var(--ei-hover); color: var(--ei-text); }
 .ei-portal .table a:not(.btn) { color: var(--ei-text-2) !important; }
@@ -420,7 +417,7 @@ body.ei-portal {
 .ei-portal .badge {
   border-radius: var(--ei-r-pill);
   font-size: 12px;
-  font-weight: 400;
+  font-weight: 600;
   line-height: 1.5;
   padding: 1px 10px;
   border: 1px solid var(--ei-border);
@@ -428,7 +425,7 @@ body.ei-portal {
   color: var(--ei-text-2);
   vertical-align: middle;
 }
-.ei-portal .badge-success { background: rgba(62, 207, 142, .08); border-color: var(--ei-accent-border); color: var(--ei-accent); }
+.ei-portal .badge-success { background: var(--ei-accent-soft); border-color: transparent; color: var(--ei-accent); }
 .ei-portal .badge-warning { background: var(--ei-surface); border-color: var(--ei-border-strong); color: var(--ei-text); }
 .ei-portal .badge-danger { background: transparent; border-color: var(--ei-border-strong); color: var(--ei-text-3); }
 .ei-portal .badge-secondary,
@@ -437,7 +434,7 @@ body.ei-portal {
 
 /* ---------- callouts & alerts ---------- */
 .ei-portal .callout {
-  background: var(--ei-surface);
+  background: var(--ei-bg);
   border: 1px solid var(--ei-border);
   border-left: 2px solid var(--ei-green);
   border-radius: var(--ei-r-input);
@@ -452,7 +449,7 @@ body.ei-portal {
 .ei-portal .callout h5, .ei-portal .callout .h6 { color: var(--ei-text); }
 .ei-portal .callout .fa-lock { color: var(--ei-accent); margin-right: 4px; }
 .ei-portal .alert {
-  background: var(--ei-surface);
+  background: var(--ei-bg);
   border: 1px solid var(--ei-border);
   border-radius: var(--ei-r-input);
   color: var(--ei-text-2);
@@ -471,17 +468,15 @@ body.ei-portal {
 .ei-portal .ei-locked span { background: var(--ei-border-input) !important; }
 
 /* ---------- auth pages ---------- */
-body.ei-portal.login-page { background: var(--ei-bg) !important; }
 .ei-portal .login-box { width: 400px; max-width: calc(100% - 32px); }
 .ei-portal .login-logo { margin-bottom: 24px; }
 .ei-portal .login-logo a {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
   color: var(--ei-text) !important;
-  font-size: 24px;
-  font-weight: 500;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
 }
+body.ei-portal.login-page { background: var(--ei-canvas) !important; }
 .ei-portal .login-card-body { background: transparent; color: var(--ei-text); padding: 32px; }
 .ei-portal .login-box-msg { color: var(--ei-text-2); font-size: 16px; padding: 0 0 24px; }
 .ei-portal .login-card-body .btn-block { margin-top: 0; }
@@ -515,7 +510,7 @@ body.ei-portal.login-page { background: var(--ei-bg) !important; }
   background: var(--ei-bg);
   border: 1px solid var(--ei-border);
   border-radius: var(--ei-r-card);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .24);
+  box-shadow: var(--ei-shadow);
   font-family: var(--ei-font);
 }
 .ei-portal .flatpickr-calendar.arrowTop:before,
@@ -524,7 +519,7 @@ body.ei-portal.login-page { background: var(--ei-bg) !important; }
 .ei-portal .flatpickr-calendar.arrowBottom:after { display: none; }
 .ei-portal .flatpickr-months .flatpickr-month,
 .ei-portal .flatpickr-current-month .flatpickr-monthDropdown-months,
-.ei-portal .flatpickr-current-month input.cur-year { color: var(--ei-text); fill: var(--ei-text); font-size: 14px; font-weight: 500; }
+.ei-portal .flatpickr-current-month input.cur-year { color: var(--ei-text); fill: var(--ei-text); font-size: 14px; font-weight: 600; }
 .ei-portal .flatpickr-current-month .flatpickr-monthDropdown-months { background: var(--ei-bg); }
 .ei-portal .flatpickr-current-month .flatpickr-monthDropdown-months option { background: var(--ei-surface); color: var(--ei-text); }
 .ei-portal .flatpickr-current-month .flatpickr-monthDropdown-months:hover,
@@ -557,9 +552,9 @@ body.ei-portal.login-page { background: var(--ei-bg) !important; }
 .ei-portal .flatpickr-day.selected.inRange,
 .ei-portal .flatpickr-day.startRange.inRange,
 .ei-portal .flatpickr-day.endRange.inRange {
-  background: var(--ei-emerald); border-color: var(--ei-emerald); color: var(--ei-on-accent);
+  background: var(--ei-primary); border-color: var(--ei-primary); color: var(--ei-on-primary);
 }
 .ei-portal .flatpickr-day.selected.startRange + .endRange:not(:nth-child(7n+1)),
 .ei-portal .flatpickr-day.startRange.startRange + .endRange:not(:nth-child(7n+1)),
-.ei-portal .flatpickr-day.endRange.startRange + .endRange:not(:nth-child(7n+1)) { box-shadow: -10px 0 0 var(--ei-emerald); }
+.ei-portal .flatpickr-day.endRange.startRange + .endRange:not(:nth-child(7n+1)) { box-shadow: -10px 0 0 var(--ei-primary); }
 .ei-portal .flatpickr-day.week.selected { box-shadow: none; }

@@ -12,21 +12,19 @@ AppAsset::register($this);
 $this->registerCsrfMetaTags();
 $this->registerMetaTag(['charset' => Yii::$app->charset], 'charset');
 $this->registerMetaTag(['name' => 'viewport', 'content' => 'width=device-width, initial-scale=1, shrink-to-fit=no']);
-if (!isset($this->params['description'])) {
-    $this->registerMetaTag(['name' => 'description', 'content' => 'Newly registered LLCs and corporations, delivered to your agents every day with filing details, registered agents and officers.'], 'description');
-} else {
-    $this->registerMetaTag(['name' => 'description', 'content' => $this->params['description']], 'description');
-}
+$this->registerMetaTag(['name' => 'description', 'content' => $this->params['description'] ?? 'Newly registered LLCs and corporations from US state registries, searchable within 24 hours of filing, with registered agents and officers.'], 'description');
 $this->registerLinkTag(['rel' => 'icon', 'type' => 'image/svg+xml', 'href' => Yii::getAlias('@web/favicon.svg')]);
 if (!empty($this->params['canonical'])) {
     $this->registerLinkTag(['rel' => 'canonical', 'href' => Fmt::canonical($this->params['canonical'])]);
 }
 if (Yii::$app->params['noindex']) {
-    $this->registerMetaTag(['name' => 'robots', 'content' => 'noindex,nofollow']); // site-wide switch (SITE_NOINDEX)
+    $this->registerMetaTag(['name' => 'robots', 'content' => 'noindex,nofollow']);
 } elseif (!empty($this->params['noindex'])) {
-    $this->registerMetaTag(['name' => 'robots', 'content' => 'noindex,follow']);    // per-page (search results, legal drafts)
+    $this->registerMetaTag(['name' => 'robots', 'content' => 'noindex,follow']);
 }
-$title = $this->title ? $this->title . ' | EntityIndex' : 'EntityIndex — New US businesses for agents, every day';
+$title = $this->title ? $this->title . ' | EntityIndex' : 'EntityIndex | New US business registrations, searchable within 24 hours';
+$route = Yii::$app->controller->route;
+$nav = [['Features', ['/site/features']], ['Pricing', ['/pricing/index']], ['FAQ', ['/site/faq']], ['About', ['/site/about']], ['Contact', ['/site/contact']]];
 ?>
 <?php $this->beginPage() ?>
 <!DOCTYPE html>
@@ -39,27 +37,22 @@ $title = $this->title ? $this->title . ' | EntityIndex' : 'EntityIndex — New U
 <?php $this->beginBody() ?>
 
 <header class="site-header">
-    <nav class="navbar navbar-expand-lg">
+    <nav class="navbar navbar-expand-lg" aria-label="Main">
         <div class="container">
-            <a class="navbar-brand logo" href="<?= Url::to(['/site/index']) ?>" aria-label="EntityIndex home">
-                <span class="logo-mark" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="2" width="9" height="2.4" rx="1.2" fill="#fbfbf9"/><rect x="1" y="6.8" width="14" height="2.4" rx="1.2" fill="#3fbf8f"/><rect x="1" y="11.6" width="6" height="2.4" rx="1.2" fill="#fbfbf9"/></svg></span>
-                EntityIndex
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
+            <a class="logo" href="<?= Url::to(['/site/index']) ?>" aria-label="EntityIndex home">EntityIndex</a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation"><i class="bi bi-list"></i></button>
             <div class="collapse navbar-collapse" id="mainNav">
-                <ul class="navbar-nav me-auto">
-                    <?php foreach ([['Features', ['/site/features']], ['Pricing', ['/pricing/index']], ['FAQ', ['/site/faq']], ['About', ['/site/about']], ['Contact', ['/site/contact']]] as [$label, $route]): ?>
-                        <li class="nav-item"><a class="nav-link<?= Yii::$app->controller->route === ltrim($route[0], '/') ? ' active' : '' ?>" href="<?= Url::to($route) ?>"><?= $label ?></a></li>
+                <ul class="navbar-nav">
+                    <?php foreach ($nav as [$label, $to]): ?>
+                        <li class="nav-item"><a class="nav-link<?= $route === ltrim($to[0], '/') ? ' active' : '' ?>" href="<?= Url::to($to) ?>"><?= $label ?></a></li>
                     <?php endforeach ?>
                 </ul>
                 <div class="d-flex align-items-center gap-2 mt-3 mt-lg-0">
                     <?php if (Yii::$app->user->isGuest): ?>
-                        <a class="btn btn-link btn-sm text-decoration-none" href="<?= Url::to(['/portal/auth/login']) ?>">Sign in</a>
-                        <a class="btn btn-ei btn-sm" href="<?= Url::to(['/portal/auth/register']) ?>">Get started</a>
+                        <a class="signin" href="<?= Url::to(['/portal/auth/login']) ?>">Sign in</a>
+                        <a class="btn btn-ei btn-sm" href="<?= Url::to(['/portal/auth/register']) ?>">Create account <i class="bi bi-arrow-right"></i></a>
                     <?php else: ?>
-                        <a class="btn btn-ei btn-sm" href="<?= Url::to(['/portal/default/index']) ?>">Open portal</a>
+                        <a class="btn btn-ei btn-sm" href="<?= Url::to(['/portal/default/index']) ?>">Open portal <i class="bi bi-arrow-right"></i></a>
                     <?php endif ?>
                 </div>
             </div>
@@ -74,9 +67,9 @@ $title = $this->title ? $this->title . ' | EntityIndex' : 'EntityIndex — New U
 <footer class="site-footer mt-auto">
     <div class="container">
         <div class="row g-4">
-            <div class="col-lg-5">
+            <div class="col-lg-6">
                 <a class="logo" href="<?= Url::to(['/site/index']) ?>">EntityIndex</a>
-                <p class="text-muted small mt-2" style="max-width:340px">Newly registered US businesses for agents and sales teams, updated every day.</p>
+                <p class="footer-about">Business formation data from US state registries, for agents, lenders, accountants and data teams.</p>
             </div>
             <div class="col-6 col-lg-2">
                 <h4>Product</h4>
@@ -95,7 +88,7 @@ $title = $this->title ? $this->title . ' | EntityIndex' : 'EntityIndex — New U
                     <li><a href="<?= Url::to(['/site/contact']) ?>">Contact</a></li>
                 </ul>
             </div>
-            <div class="col-6 col-lg-3">
+            <div class="col-6 col-lg-2">
                 <h4>Legal</h4>
                 <ul class="list-unstyled">
                     <li><a href="<?= Url::to(['/legal/terms']) ?>">Terms of Service</a></li>
@@ -104,7 +97,7 @@ $title = $this->title ? $this->title . ' | EntityIndex' : 'EntityIndex — New U
                 </ul>
             </div>
         </div>
-        <p class="text-muted small mt-4 mb-0">© <?= date('Y') ?> EntityIndex. Public-record data provided as is, without warranty. Not affiliated with any state agency.</p>
+        <p class="legal mb-0">&copy; <?= date('Y') ?> EntityIndex. Public-record data provided as is, without warranty. Not affiliated with any state agency.</p>
     </div>
 </footer>
 

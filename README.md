@@ -45,6 +45,8 @@ Forms (AJAX, CSRF-protected, honeypot): `POST /api/waitlist`, `POST /api/opt-out
 
 The portal UI uses stock AdminLTE 3 / Bootstrap 4 components (info-box, card, callout, btn, table, progress…) in AdminLTE's `dark-mode`, themed by `web/css/portal.css`: near-black canvas, monochrome surfaces separated by 1px borders (no shadows), pill buttons and tags, 16px cards, 8px inputs, Inter, and a single green reserved for primary actions, the logo and the active nav item. The user menu (the initial avatar, top right) has Account settings, a Light / Dark / System theme choice and Sign out; the sign-in pages keep a sun/moon button. The choice is kept in the `ei_theme` cookie and the layouts render it server-side; System renders dark and `web/js/portal-theme.js` (loaded in `<head>`) switches to light before the page paints when the device prefers it, and follows the device when it changes. Reach for a stock component before writing CSS, and style with the theme variables at the top of `portal.css` so both themes stay in step.
 
+The public site (`views/`, `web/css/site.css`) is Bootstrap 5 with a restrained theme set by the variables at the top of `site.css`: white and cool grey surfaces, one navy for buttons and the call-to-action band, Source Serif 4 for headings and Inter for text, 4px corners, hairline borders and no shadows, gradients or decorative imagery. Data is shown in ruled tables (`table.ledger` inside a `.panel`) instead of cards. Reuse those pieces and the tokens for new public pages.
+
 `php yii seed/admin you@example.com 'password'` creates an admin. Paid plans are set on the `user.plan` column (`free|pro|business|bulk`) until billing exists.
 API keys and the read-only REST API are documented in the **API** section below.
 

@@ -10,7 +10,7 @@ use yii\helpers\Url;
 $plan = $plan ?? null;
 $compact = $compact ?? false;
 ?>
-<form action="<?= Url::to(['/forms/waitlist']) ?>" method="post" data-ajax data-success="You’re on the list. We’ll email you when accounts open." class="d-grid gap-3"<?= $compact ? ' style="max-width:520px"' : '' ?>>
+<form action="<?= Url::to(['/forms/waitlist']) ?>" method="post" data-ajax data-success="You’re on the list. We’ll email you when accounts open." class="d-grid gap-3">
     <input type="hidden" name="plan" value="<?= Html::encode($plan ?? '') ?>">
     <div style="position:absolute;left:-9999px" aria-hidden="true"><label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
     <div class="input-group">

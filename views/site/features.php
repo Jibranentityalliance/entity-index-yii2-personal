@@ -6,43 +6,52 @@ use yii\helpers\Html;
 use yii\helpers\Url;
 
 $this->title = 'Features';
-$this->params['description'] = 'Search new US business filings, browse the daily feed, verify state coverage, and (soon) alerts, CSV export, API and bulk data.';
+$this->params['description'] = 'Search new US business filings, view officers and addresses, export CSV, query the REST API and download daily bulk files.';
 $this->params['canonical'] = '/features';
 $rows = [
-    ['Available now', 'Search', 'Find companies by name, officer or registered-agent name, or state filing number. Filter by state, entity type, county and filing date. Results are ranked: exact filing number first, then names that start with your query.'],
-    ['Available now', 'Daily new-filings feed', 'Browse every filing by day and by state, newest first, with the time between the state record and our index shown on every row.'],
-    ['Available now', 'Company records', 'Legal name, type, status, filing number, formation date, location, estimated industry (NAICS), registered agent and filing history, each with a link back to the official source.'],
-    ['Available now', 'Coverage & freshness dashboard', 'For all 51 jurisdictions: filings per day, last update, and the median hours from state filing to searchable, so you know what you are buying.'],
-    ['Pro', 'Full officer and address records', 'Officer, manager and member names with mailing and principal addresses.'],
-    ['Pro', 'Saved-search alerts', 'Save a search such as “new LLCs in Broward County with contractor keywords” and get an email every morning.'],
-    ['Pro', 'CSV export', 'Export search results and daily lists for your CRM or dialer.'],
-    ['Business', 'REST API and webhooks', 'Query entities as JSON with a self-serve API key, and receive webhooks when new filings match your searches.'],
-    ['Data license', 'Bulk data feeds', 'Daily or weekly full-feed files (CSV or Parquet) by state or nationally, with a redistribution license available.'],
+    ['Free', true, 'Search', 'Find companies by name, registered agent or state filing number, and by officer name on paid plans. Results rank an exact filing number first, then names that start with your query.'],
+    ['Free', true, 'Filters', 'Narrow any search by state, entity type, status, county and filing date range.'],
+    ['Free', true, 'Company records', 'Legal name, entity type, status, filing number, formation date, county, estimated industry (NAICS), registered agent and a link back to the official state record.'],
+    ['Free', true, 'Related companies', 'Other new filings in the same state and county, with the same estimated industry shown first.'],
+    ['Free', true, 'State coverage', 'Every state with its source, filings by date range, last update and the median time from state filing to searchable.'],
+    ['Free', true, 'Usage dashboard', 'Your plan limits and what you have used this month, for lookups, exports and API calls.'],
+    ['Pro', true, 'Officers and addresses', 'Officer, manager and member names and titles, with principal and mailing addresses.'],
+    ['Pro', true, 'CSV export', 'Export any search, with its filters, as a CSV file for your CRM or dialer, within a monthly row allowance.'],
+    ['Business', true, 'REST API', 'Query entities as JSON by state, type, status and filing date, look up a company by state and filing number, and page through results with a cursor.'],
+    ['Business', true, 'API keys and quotas', 'Create and revoke your own keys. Every response carries rate-limit and monthly quota headers, and usage shows in your dashboard.'],
+    ['Business', true, 'API documentation', 'Endpoint reference with request parameters, response fields and examples, inside your account.'],
+    ['Data license', true, 'Daily bulk files', 'A national file and one file per state, built every day and downloadable from your account.'],
+    ['All plans', true, 'Privacy controls', 'People can ask to have their details removed, and removed details disappear from pages, the API, exports and bulk files.'],
+    ['Pro', false, 'Saved-search alerts', 'Save a search such as new LLCs in Broward County and get an email every morning with the new matches.'],
+    ['Business', false, 'Webhooks', 'Receive new filings that match your saved searches as they are indexed.'],
 ];
-$badge = ['Available now' => 'ok', 'Pro' => '', 'Business' => '', 'Data license' => ''];
 ?>
 <div class="container">
     <div class="page-head">
         <h1>Features</h1>
-        <p class="text-muted" style="max-width:62ch">EntityIndex turns scattered state registries into one searchable, up-to-date index of new businesses. Paid features are being rolled out; join the waitlist to be first.</p>
+        <p class="text-muted">EntityIndex turns scattered state registries into one searchable, up-to-date index of new businesses. Billing is not live yet; join the waitlist on a paid plan and we will contact you first.</p>
     </div>
-    <div class="row g-3">
-        <?php foreach ($rows as [$tag, $title, $text]): ?>
-            <div class="col-md-6">
-                <div class="buyer">
-                    <div class="mb-2"><span class="badge-pill-ei <?= $badge[$tag] ?>"><?= Html::encode($tag === 'Available now' ? 'Available now' : 'Coming with ' . $tag) ?></span></div>
-                    <h3><?= Html::encode($title) ?></h3>
-                    <p><?= Html::encode($text) ?></p>
-                </div>
-            </div>
-        <?php endforeach ?>
+    <div class="panel">
+        <table class="ledger">
+            <thead><tr><th>Feature</th><th class="d-none d-md-table-cell">Description</th><th>Plan</th><th>Status</th></tr></thead>
+            <tbody>
+            <?php foreach ($rows as [$plan, $live, $title, $text]): ?>
+                <tr>
+                    <td><strong><?= Html::encode($title) ?></strong><span class="sub d-md-none"><?= Html::encode($text) ?></span></td>
+                    <td class="d-none d-md-table-cell text-muted"><?= Html::encode($text) ?></td>
+                    <td class="text-nowrap"><?= Html::encode($plan) ?></td>
+                    <td class="text-nowrap"><?= $live ? '<span class="status-active">Available</span>' : '<span class="text-muted">Planned</span>' ?></td>
+                </tr>
+            <?php endforeach ?>
+            </tbody>
+        </table>
     </div>
     <section class="section">
-        <div class="card-ei d-flex flex-wrap justify-content-between align-items-center gap-3">
-            <div><h2 class="h4 mb-1">See it for yourself</h2><p class="text-muted mb-0">Create a free account and search today’s filings.</p></div>
-            <div class="d-flex gap-2">
-                <a href="<?= Url::to(['/portal/auth/register']) ?>" class="btn btn-ei">Create free account</a>
-                <a href="<?= Url::to(['/pricing/index']) ?>" class="btn btn-outline-secondary">See pricing</a>
+        <div class="cta">
+            <div><h2>See it for yourself.</h2><p>Create a free account and search today’s filings.</p></div>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="<?= Url::to(['/portal/auth/register']) ?>" class="btn btn-light btn-lg">Create an account</a>
+                <a href="<?= Url::to(['/pricing/index']) ?>" class="btn btn-outline-light btn-lg">View pricing</a>
             </div>
         </div>
     </section>

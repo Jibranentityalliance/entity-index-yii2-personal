@@ -29,7 +29,7 @@ $light = Module::theme() === 'light';
 <?php if ($theme === 'system'): ?><script>eiTheme.sync();</script><?php endif ?>
 <?php $this->beginBody() ?>
 <div class="login-box">
-    <div class="login-logo"><a href="<?= Url::to(['/site/index']) ?>"><?= $this->render('_logo', ['size' => 32]) ?>EntityIndex</a></div>
+    <div class="login-logo"><a href="<?= Url::to(['/site/index']) ?>">EntityIndex</a></div>
     <div class="card">
         <div class="card-body login-card-body">
             <?php foreach (Yii::$app->session->getAllFlashes() as $type => $msg): ?>

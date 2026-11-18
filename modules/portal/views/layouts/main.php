@@ -54,7 +54,7 @@ if (Yii::$app->user->identity?->isAdmin()) {
     </nav>
 
     <aside class="main-sidebar <?= $light ? 'sidebar-light-primary' : 'sidebar-dark-primary' ?>">
-        <a href="<?= Url::to(['/portal/default/index']) ?>" class="brand-link"><?= $this->render('_logo') ?><span class="brand-text">EntityIndex</span></a>
+        <a href="<?= Url::to(['/portal/default/index']) ?>" class="brand-link"><span class="brand-text">EntityIndex</span></a>
         <div class="sidebar">
             <nav class="mt-3">
                 <ul class="nav nav-pills nav-sidebar flex-column" role="menu">

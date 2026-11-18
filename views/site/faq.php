@@ -14,15 +14,17 @@ foreach ($faq as [$cat, $q, $a]) {
     $groups[$cat][] = [$q, $a];
 }
 ?>
-<div class="container prose">
+<div class="container">
     <div class="page-head"><h1>Frequently asked questions</h1></div>
-    <?php foreach ($groups as $cat => $items): ?>
-        <h2 class="h4 mt-4"><?= Html::encode($cat) ?></h2>
-        <div class="faq">
-            <?php foreach ($items as [$q, $a]): ?>
-                <details><summary><?= Html::encode($q) ?></summary><p class="text-muted"><?= Html::encode($a) ?><?= str_contains($q, 'remove my personal') ? ' <a href="' . Url::to(['/opt-out/index']) . '">Request removal</a>.' : '' ?></p></details>
-            <?php endforeach ?>
-        </div>
-    <?php endforeach ?>
-    <p class="mt-4 text-muted">Still have a question? <a href="<?= Url::to(['/site/contact']) ?>">Contact us</a>.</p>
+    <div class="prose">
+        <?php foreach ($groups as $cat => $items): ?>
+            <h2><?= Html::encode($cat) ?></h2>
+            <div class="faq">
+                <?php foreach ($items as [$q, $a]): ?>
+                    <details><summary><?= Html::encode($q) ?></summary><p class="text-muted"><?= Html::encode($a) ?><?= str_contains($q, 'remove my personal') ? ' <a href="' . Url::to(['/opt-out/index']) . '">Request removal</a>.' : '' ?></p></details>
+                <?php endforeach ?>
+            </div>
+        <?php endforeach ?>
+        <p class="mt-5 text-muted">Still have a question? <a href="<?= Url::to(['/site/contact']) ?>">Contact us</a>.</p>
+    </div>
 </div>
