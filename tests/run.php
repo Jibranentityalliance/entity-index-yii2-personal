@@ -103,6 +103,18 @@ class Http
     }
 }
 
+function mailsWith(string $needle, int $since): array
+{
+    $out = [];
+    foreach (glob(dirname(__DIR__) . '/runtime/mail/*.eml') ?: [] as $f) {
+        $body = quoted_printable_decode((string) file_get_contents($f));
+        if (filemtime($f) >= $since && str_contains($body, $needle)) {
+            $out[] = $body;
+        }
+    }
+    return $out;
+}
+
 echo "Preparing test database...\n";
 run('php yii migrate/fresh --interactive=0', $env, $root);
 run('php yii seed/all', $env, $root);
@@ -772,10 +784,14 @@ $oid = (int) $pdo->lastInsertId();
 $pdo->exec("INSERT INTO people (entity_id, name, role, title, address) VALUES ($oid, 'Owen Officer', 'officer', 'MGR', '1 Home St, Columbus, OH 43004'), ($oid, 'Ava Agent', 'agent', NULL, '2 Agent Way, Columbus, OH 43004')");
 $optPage = '/portal/company/oh/opt-test-llc-o700';
 $optFirst = (int) $pdo->query('SELECT COALESCE(MAX(id), 0) FROM opt_out_requests')->fetchColumn();
+$optMailSince = time() - 1;
 $g = new Http('http://127.0.0.1:18088');
 $r = $g->ajax('/api/opt-out', ['entity_ref' => 'https://example.com' . $optPage, 'person_name' => 'Owen Officer', 'email' => 'owen@example.com', 'reason' => 'my home address'], '/opt-out');
 $rid = (int) $pdo->query("SELECT id FROM opt_out_requests WHERE email = 'owen@example.com' ORDER BY id DESC LIMIT 1")->fetchColumn();
 check('opt-out: the public form stores a pending request', $r['status'] === 200 && $rid > $optFirst && $pdo->query("SELECT status FROM opt_out_requests WHERE id = $rid")->fetchColumn() === 'pending');
+$got = mailsWith('owen@example.com', $optMailSince);
+check('opt-out: the requester is emailed a confirmation with the reference', (bool) array_filter($got, fn($b) => str_contains($b, 'We received your removal request') && str_contains($b, "#$rid")));
+check('opt-out: admins are emailed the new request with a link to it', (bool) array_filter(mailsWith("New removal request #$rid", $optMailSince), fn($b) => str_contains($b, "/admin/opt-outs/view?id=$rid") && str_contains($b, 'my home address')));
 $page = $cust->get($optPage)['body'];
 check('opt-out: before approval the officer and agent are visible', str_contains($page, 'Owen Officer') && str_contains($page, 'Ava Agent'));
 check('opt-out: the queue lists the pending request', str_contains($ad->get('/admin/opt-outs')['body'], 'owen@example.com') && str_contains($ad->get('/admin/opt-outs')['body'], 'Review'));
@@ -789,6 +805,7 @@ $r = $ad->postForm("/admin/opt-outs/resolve?id=$rid", ['entity_id' => $oid, 'not
 $row = $pdo->query("SELECT status, entity_id, entity_state, entity_url_key, resolved_by, note FROM opt_out_requests WHERE id = $rid")->fetch(PDO::FETCH_ASSOC);
 check('opt-out: approving hides the people and records who and what', $r['status'] === 302 && (int) $pdo->query("SELECT people_hidden FROM entities WHERE id = $oid")->fetchColumn() === 1
     && $row['status'] === 'done' && (int) $row['entity_id'] === $oid && $row['entity_state'] === 'OH' && $row['entity_url_key'] === 'o700' && (int) $row['resolved_by'] === $adminId && $row['note'] === 'Confirmed by email');
+check('opt-out: approving emails the requester which company was cleared, without the internal note', (bool) array_filter(mailsWith('owen@example.com', $optMailSince), fn($b) => str_contains($b, 'Your details have been removed') && str_contains($b, 'OPT TEST LLC') && !str_contains($b, 'Confirmed by email')));
 $page = $cust->get($optPage)['body'];
 check('opt-out: the company page shows no people, agent or address and says why', $page !== '' && !str_contains($page, 'Owen Officer') && !str_contains($page, 'Ava Agent') && !str_contains($page, '1 Home St') && str_contains($page, 'removed from this company at the owner'));
 check('opt-out: searching the officer\'s name no longer finds the company', str_contains($cust->get('/portal/companies?q=Owen+Officer')['body'], '0 companies') && str_contains($cust->get('/portal/companies?q=OPT+TEST')['body'], 'OPT TEST LLC'));
@@ -818,11 +835,51 @@ check('opt-out: reopening shows the people again and the request is pending', $r
 $r = $ad->postForm("/admin/opt-outs/reject?id=$rid", ['note' => 'Not the owner'], "/admin/opt-outs/view?id=$rid");
 check('opt-out: rejecting closes the request and changes nothing', $r['status'] === 302 && $pdo->query("SELECT status FROM opt_out_requests WHERE id = $rid")->fetchColumn() === 'rejected'
     && (int) $pdo->query("SELECT people_hidden FROM entities WHERE id = $newId")->fetchColumn() === 0);
+check('opt-out: rejecting emails the requester, without the internal note', (bool) array_filter(mailsWith('owen@example.com', $optMailSince), fn($b) => str_contains($b, 'About your removal request') && !str_contains($b, 'Not the owner')));
 check('opt-out: a closed request cannot be approved again', $ad->postForm("/admin/opt-outs/resolve?id=$rid", ['entity_id' => $newId], "/admin/opt-outs/view?id=$rid")['status'] === 302 && $pdo->query("SELECT status FROM opt_out_requests WHERE id = $rid")->fetchColumn() === 'rejected'
     && (int) $pdo->query("SELECT people_hidden FROM entities WHERE id = $newId")->fetchColumn() === 0);
 $pdo->exec("DELETE FROM entities WHERE id = $newId");
 $pdo->exec('DROP TABLE manual_companies');
 proc_terminate($srvA);
+
+echo "Password reset\n";
+run('php yii cache/flush-all --interactive=0', $env, $root);
+$srvR = startServer(18087, $env, $root);
+$rbase = 'http://127.0.0.1:18087';
+$owner = new Http($rbase);
+$owner->postForm('/portal/auth/register', ['RegisterForm' => ['name' => 'Rita Reset', 'email' => 'reset@example.com', 'password' => 'oldpassword1', 'password_repeat' => 'oldpassword1']]);
+check('reset: the signed-in session works before the reset', $owner->get('/portal')['status'] === 200);
+$g = new Http($rbase);
+check('reset: login page links to the forgot-password page', str_contains($g->get('/portal/auth/login')['body'], '/portal/auth/forgot'));
+$t0 = time() - 1;
+$r = $g->postForm('/portal/auth/forgot', ['ForgotPasswordForm' => ['email' => 'nobody@example.com']]);
+check('reset: an unknown email gets the same answer and no mail', $r['status'] === 200 && str_contains($r['body'], 'Check your email') && mailsWith('nobody@example.com', $t0) === []);
+$r = $g->postForm('/portal/auth/forgot', ['ForgotPasswordForm' => ['email' => 'reset@example.com']]);
+$mails = mailsWith('reset@example.com', $t0);
+$token = $mails && preg_match('/token=([A-Za-z0-9_-]{43})/', $mails[0], $mm) ? $mm[1] : '';
+check('reset: a known email gets one mail with a reset link', $r['status'] === 200 && str_contains($r['body'], 'Check your email') && count($mails) === 1 && $token !== '' && str_contains($mails[0], 'Reset your password'));
+check('reset: only a hash of the token is stored', $token !== '' && $pdo->query("SELECT password_reset_hash FROM `user` WHERE email = 'reset@example.com'")->fetchColumn() === hash('sha256', $token));
+$g->postForm('/portal/auth/forgot', ['ForgotPasswordForm' => ['email' => 'reset@example.com']]);
+check('reset: a second request within a minute sends no new mail', count(mailsWith('reset@example.com', $t0)) === 1);
+check('reset: a wrong token shows the expired page', str_contains($g->get('/portal/auth/reset?token=' . str_repeat('x', 43))['body'], 'expired or was already used'));
+$path = '/portal/auth/reset?token=' . $token;
+$r = $g->get($path);
+check('reset: the link opens the new-password form with no-referrer', $r['status'] === 200 && str_contains($r['body'], 'Choose a new password') && str_contains($r['body'], 'content="no-referrer"'));
+$r = $g->postForm($path, ['ResetPasswordForm' => ['password' => 'newpassword1', 'password_repeat' => 'different1']]);
+check('reset: mismatched passwords are rejected', $r['status'] === 200 && str_contains($r['body'], 'Passwords do not match'));
+$t1 = time() - 1;
+$r = $g->postForm($path, ['ResetPasswordForm' => ['password' => 'newpassword1', 'password_repeat' => 'newpassword1']]);
+check('reset: a valid new password redirects to sign in', $r['status'] === 302 && str_contains((string) $r['location'], '/portal/auth/login'), $r['status'] . ' ' . $r['location']);
+check('reset: a password-changed notice is mailed', (bool) array_filter(mailsWith('reset@example.com', $t1), fn($b) => str_contains($b, 'Your password was changed')));
+check('reset: the token works only once', str_contains($g->get($path)['body'], 'expired or was already used'));
+check('reset: other sessions are signed out', $owner->get('/portal')['status'] === 302);
+$r = $g->postForm('/portal/auth/login', ['LoginForm' => ['email' => 'reset@example.com', 'password' => 'oldpassword1']]);
+check('reset: the old password no longer works', $r['status'] === 200 && str_contains($r['body'], 'Incorrect email or password'));
+$r = $g->postForm('/portal/auth/login', ['LoginForm' => ['email' => 'reset@example.com', 'password' => 'newpassword1']]);
+check('reset: the new password signs in', $r['status'] === 302);
+$pdo->exec("UPDATE `user` SET password_reset_hash = " . $pdo->quote(hash('sha256', 'expired-token-0123456789-0123456789-0123456')) . ", password_reset_expires_at = UTC_TIMESTAMP() - INTERVAL 1 MINUTE WHERE email = 'reset@example.com'");
+check('reset: an expired token is refused', str_contains((new Http($rbase))->get('/portal/auth/reset?token=expired-token-0123456789-0123456789-0123456')['body'], 'expired or was already used'));
+proc_terminate($srvR);
 
 
 echo "\n" . ($checks - $failures) . "/$checks checks passed" . ($failures ? ", $failures FAILED" : '') . ".\n";

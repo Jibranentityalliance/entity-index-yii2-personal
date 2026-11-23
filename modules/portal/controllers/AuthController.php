@@ -2,8 +2,11 @@
 
 namespace app\modules\portal\controllers;
 
+use app\models\User;
+use app\modules\portal\models\ForgotPasswordForm;
 use app\modules\portal\models\LoginForm;
 use app\modules\portal\models\RegisterForm;
+use app\modules\portal\models\ResetPasswordForm;
 use Yii;
 use yii\filters\AccessControl;
 use yii\filters\VerbFilter;
@@ -19,7 +22,7 @@ class AuthController extends Controller
             'access' => [
                 'class' => AccessControl::class,
                 'rules' => [
-                    ['allow' => true, 'actions' => ['login', 'register'], 'roles' => ['?']],
+                    ['allow' => true, 'actions' => ['login', 'register', 'forgot', 'reset'], 'roles' => ['?']],
                     ['allow' => true, 'actions' => ['logout'], 'roles' => ['@']],
                 ],
                 'denyCallback' => fn() => $this->redirect(['/portal/default/index']),
@@ -48,6 +51,31 @@ class AuthController extends Controller
         }
         $model->password = $model->password_repeat = '';
         return $this->render('register', ['model' => $model]);
+    }
+
+    public function actionForgot()
+    {
+        $model = new ForgotPasswordForm();
+        if ($model->load(Yii::$app->request->post()) && $model->send()) {
+            return $this->render('forgot-sent', ['email' => $model->email]);
+        }
+        return $this->render('forgot', ['model' => $model]);
+    }
+
+    public function actionReset(string $token = '')
+    {
+        $this->view->registerMetaTag(['name' => 'referrer', 'content' => 'no-referrer'], 'referrer');
+        $user = User::findByPasswordResetToken($token);
+        if ($user === null) {
+            return $this->render('reset-invalid');
+        }
+        $model = new ResetPasswordForm($user);
+        if ($model->load(Yii::$app->request->post()) && $model->reset()) {
+            Yii::$app->session->setFlash('success', 'Your password has been changed. Sign in with your new password.');
+            return $this->redirect(['/portal/auth/login']);
+        }
+        $model->password = $model->password_repeat = '';
+        return $this->render('reset', ['model' => $model, 'email' => $user->email]);
     }
 
     public function actionLogout()

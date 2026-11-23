@@ -31,4 +31,5 @@ $this->title = 'Sign in';
     <div class="col-5"><?= Html::submitButton('Sign in', ['class' => 'btn btn-primary btn-block']) ?></div>
 </div>
 <?php ActiveForm::end() ?>
-<p class="mt-3 mb-0"><a href="<?= Url::to(['/portal/auth/register']) ?>" class="text-center">Create a free account</a></p>
+<p class="mt-3 mb-1"><a href="<?= Url::to(['/portal/auth/forgot']) ?>">Forgot your password?</a></p>
+<p class="mb-0"><a href="<?= Url::to(['/portal/auth/register']) ?>" class="text-center">Create a free account</a></p>

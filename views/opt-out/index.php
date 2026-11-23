@@ -18,7 +18,7 @@ $this->params['canonical'] = '/opt-out';
     <div class="row">
         <div class="col-lg-8">
             <div class="form-panel">
-                <form action="<?= Url::to(['/forms/opt-out']) ?>" method="post" data-ajax data-success="Request received. We will confirm by email, usually within 3 business days." class="d-grid gap-3">
+                <form action="<?= Url::to(['/forms/opt-out']) ?>" method="post" data-ajax data-success="Request received. We have emailed you a confirmation and will email again when it is done, usually within 3 business days." class="d-grid gap-3">
                     <div>
                         <label for="o-ref" class="form-label">Company page URL, or state and filing number</label>
                         <input id="o-ref" class="form-control" name="entity_ref" required value="<?= Html::encode($defaultRef) ?>" placeholder="<?= Html::encode(Yii::$app->params['siteUrl']) ?>/company/fl/…">

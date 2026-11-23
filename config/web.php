@@ -41,11 +41,7 @@ $config = [
         'errorHandler' => [
             'errorAction' => 'site/error',
         ],
-        'mailer' => [
-            'class' => \yii\symfonymailer\Mailer::class,
-            'viewPath' => '@app/mail',
-            'useFileTransport' => true, // switch to an SMTP transport in production
-        ],
+        'mailer' => require __DIR__ . '/mail.php',
         'log' => [
             'traceLevel' => YII_DEBUG ? 3 : 0,
             'targets' => [

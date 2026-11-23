@@ -25,6 +25,7 @@ return [
         'db' => $db,
         'dbEinSkipTracing' => $dbEinSkipTracing,
         'mutex' => \yii\mutex\FileMutex::class,
+        'mailer' => require __DIR__ . '/mail.php',
     ],
     'params' => $params,
     'controllerMap' => [

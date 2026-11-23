@@ -249,8 +249,8 @@ files to S3 or R2 when that becomes the constraint.
 1. `SITE_MODE=coming_soon` until the real data pipeline is loading; check `/coming-soon`, `/opt-out`, `/legal/terms`.
 2. Switch to `SITE_MODE=live`, **and `SITE_NOINDEX=false` when you want search engines in** (until then every page has `<meta name="robots" content="noindex,nofollow">` and an `X-Robots-Tag` header), then `php yii cache/flush-all`.
 3. Add the `Sitemap:` line back to `web/robots.txt` and submit `https://entityindex.com/sitemap.xml` in Google Search Console. `web/robots.txt` hard-codes the sitemap URL for entityindex.com; edit it if the domain differs.
-4. Replace the placeholder text on `/legal/privacy` and `/legal/terms` (they are draft outlines).
-5. Configure real outgoing mail (`components.mailer` in `config/web.php`) before adding features that send email.
+4. Have the lawyer review `/legal/privacy` and `/legal/terms`.
+5. Configure real outgoing mail in `config/mail.php` (it writes to `runtime/mail` until then), so password reset emails reach customers.
 
 ## Automatic deploys (GitHub Actions → SFTP)
 

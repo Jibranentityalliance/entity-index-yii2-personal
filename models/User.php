@@ -28,6 +28,7 @@ class User extends ActiveRecord implements IdentityInterface
     public const STATUS_DISABLED = 0;
     public const ROLE_CUSTOMER = 'customer';
     public const ROLE_ADMIN = 'admin';
+    public const RESET_TTL = 3600;
 
     public static function tableName()
     {
@@ -83,6 +84,40 @@ class User extends ActiveRecord implements IdentityInterface
     public function validatePassword(string $password): bool
     {
         return Yii::$app->security->validatePassword($password, $this->password_hash);
+    }
+
+    public function issuePasswordReset(): string
+    {
+        $token = Yii::$app->security->generateRandomString(43);
+        $this->password_reset_hash = hash('sha256', $token);
+        $this->password_reset_expires_at = gmdate('Y-m-d H:i:s', time() + self::RESET_TTL);
+        $this->save(false, ['password_reset_hash', 'password_reset_expires_at', 'updated_at']);
+        return $token;
+    }
+
+    public function passwordResetIssuedWithin(int $seconds): bool
+    {
+        return $this->password_reset_expires_at !== null
+            && strtotime($this->password_reset_expires_at . ' UTC') - self::RESET_TTL > time() - $seconds;
+    }
+
+    public static function findByPasswordResetToken(string $token): ?self
+    {
+        if (strlen($token) < 32 || strlen($token) > 64) {
+            return null;
+        }
+        return static::find()
+            ->where(['password_reset_hash' => hash('sha256', $token), 'status' => self::STATUS_ACTIVE])
+            ->andWhere(['>', 'password_reset_expires_at', gmdate('Y-m-d H:i:s')])
+            ->one();
+    }
+
+    public function changePassword(string $password): void
+    {
+        $this->setPassword($password);
+        $this->auth_key = Yii::$app->security->generateRandomString(32);
+        $this->password_reset_hash = null;
+        $this->password_reset_expires_at = null;
     }
 
     /** Paid plans and admins see full records (officers, addresses). */

@@ -4,6 +4,7 @@ namespace app\modules\admin\controllers;
 
 use app\models\Entity;
 use app\models\OptOutRequest;
+use app\services\Mail;
 use app\services\OptOutMatcher;
 use Yii;
 use yii\db\Query;
@@ -74,7 +75,8 @@ class OptOutsController extends AdminController
             $request->entity_url_key = $entity->url_key;
             $this->close($request);
             $tx->commit();
-            Yii::$app->session->setFlash('success', 'Personal details are now hidden on ' . $entity->name . '. Reply to ' . $request->email . ' to confirm; no email is sent from here.');
+            $sent = Mail::optOutDone($request, $entity);
+            Yii::$app->session->setFlash($sent ? 'success' : 'warning', 'Personal details are now hidden on ' . $entity->name . '. ' . $this->mailNote($sent, $request->email));
         }
         return $this->redirect(['view', 'id' => $request->id]);
     }
@@ -87,7 +89,8 @@ class OptOutsController extends AdminController
         } else {
             $request->status = 'rejected';
             $this->close($request);
-            Yii::$app->session->setFlash('success', 'Request rejected. Reply to ' . $request->email . ' to let them know; no email is sent from here.');
+            $sent = Mail::optOutRejected($request);
+            Yii::$app->session->setFlash($sent ? 'success' : 'warning', 'Request rejected. ' . $this->mailNote($sent, $request->email));
         }
         return $this->redirect(['view', 'id' => $request->id]);
     }
@@ -128,7 +131,12 @@ class OptOutsController extends AdminController
         $request->save(false);
     }
 
-    private function find(int $id): OptOutRequest
+    private function mailNote(bool $sent, string $email): string
+    {
+        return $sent ? "We emailed $email to let them know." : "The email to $email could not be sent; reply to them yourself.";
+    }
+
+        private function find(int $id): OptOutRequest
     {
         return OptOutRequest::findOne($id) ?? throw new NotFoundHttpException('Request not found.');
     }

@@ -3,6 +3,7 @@
 namespace app\modules\portal\models;
 
 use app\models\User;
+use app\services\Mail;
 use yii\base\Model;
 
 /** Edit name; optionally change password (requires the current one). */
@@ -53,10 +54,16 @@ class AccountForm extends Model
             return false;
         }
         $this->user->name = $this->name;
-        if ((string) $this->new_password !== '') {
-            $this->user->setPassword($this->new_password);
-            $this->user->auth_key = \Yii::$app->security->generateRandomString(32);
+        $changed = (string) $this->new_password !== '';
+        if ($changed) {
+            $this->user->changePassword($this->new_password);
         }
-        return $this->user->save(false);
+        if (!$this->user->save(false)) {
+            return false;
+        }
+        if ($changed) {
+            Mail::passwordChanged($this->user);
+        }
+        return true;
     }
 }

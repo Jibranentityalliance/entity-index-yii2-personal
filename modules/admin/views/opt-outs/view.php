@@ -74,7 +74,7 @@ $now = gmdate('Y-m-d H:i:s');
                     </div>
                 <?php endif ?>
                 <div class="card-body">
-                    <label for="oo-note">Note <span class="text-muted">(optional, kept with the request)</span></label>
+                    <label for="oo-note">Note <span class="text-muted">(optional, internal: kept with the request, not emailed)</span></label>
                     <textarea id="oo-note" class="form-control" name="note" rows="2" maxlength="500"></textarea>
                 </div>
                 <div class="card-footer d-flex flex-wrap justify-content-between">
@@ -94,7 +94,7 @@ $now = gmdate('Y-m-d H:i:s');
                     <?php else: ?>
                         <p>This request was rejected. Nothing was changed.</p>
                     <?php endif ?>
-                    <p class="text-muted small mb-0">No email is sent from here. Reply to <a href="mailto:<?= Html::encode($request->email) ?>"><?= Html::encode($request->email) ?></a> yourself.</p>
+                    <p class="text-muted small mb-0"><?= Html::encode($request->email) ?> was emailed the outcome when the request was closed. The note above is not included in that email.</p>
                 </div>
                 <div class="card-footer">
                     <?= Html::beginForm(['/admin/opt-outs/reopen', 'id' => $request->id], 'post', ['onsubmit' => "return confirm('Reopen this request? Anything it hid will be visible again.')"]) ?>
