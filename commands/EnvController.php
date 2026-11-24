@@ -16,7 +16,7 @@ use yii\helpers\Console;
  */
 class EnvController extends Controller
 {
-    private const SECRET = ['DB_USER', 'DB_PASS', 'COOKIE_VALIDATION_KEY', 'DB_DSN', 'DB_DSN_EIN_SKIP_TRACING', 'DB_USER_EIN_SKIP_TRACING', 'DB_PASS_EIN_SKIP_TRACING'];
+    private const SECRET = ['DB_USER', 'DB_PASS', 'COOKIE_VALIDATION_KEY', 'DB_DSN', 'DB_DSN_EIN_SKIP_TRACING', 'DB_USER_EIN_SKIP_TRACING', 'DB_PASS_EIN_SKIP_TRACING', 'MAIL_DSN'];
 
     public function actionCheck(): int
     {
@@ -51,7 +51,8 @@ class EnvController extends Controller
 
         $this->stdout("\nOptional settings:\n");
         foreach (['DB_PASS' => '', 'YII_ENV' => 'prod', 'YII_DEBUG' => '', 'SITE_MODE' => 'live', 'SITE_NOINDEX' => 'true', 'ADMIN_EMAIL' => '',
-            'MIRROR_DB' => 'ein_skip_tracing', 'MIRROR_TZ' => 'UTC', 'REPORT_TZ' => 'America/New_York', 'DB_DSN_EIN_SKIP_TRACING' => '', 'DB_USER_EIN_SKIP_TRACING' => '', 'DB_PASS_EIN_SKIP_TRACING' => '', 'WEBHOOKS_ALLOW_PRIVATE' => 'false'] as $k => $default) {
+            'MIRROR_DB' => 'ein_skip_tracing', 'MIRROR_TZ' => 'UTC', 'REPORT_TZ' => 'America/New_York', 'DB_DSN_EIN_SKIP_TRACING' => '', 'DB_USER_EIN_SKIP_TRACING' => '', 'DB_PASS_EIN_SKIP_TRACING' => '', 'WEBHOOKS_ALLOW_PRIVATE' => 'false',
+            'MAIL_DSN' => 'file transport, written to runtime/mail', 'BULK_DIR' => '@runtime/bulk', 'BULK_SENDFILE' => 'php'] as $k => $default) {
             $v = env($k);
             $shown = $v === null ? ($default !== '' ? "not set (default: $default)" : 'not set') : (in_array($k, self::SECRET, true) ? 'set' : "set ($v)");
             $this->stdout(sprintf("  %-26s %s\n", $k, $shown));

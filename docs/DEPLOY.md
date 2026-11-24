@@ -1,5 +1,7 @@
 # Deploying to an AWS Lightsail LAMP instance
 
+For what the production server needs after commit `c5dcb99`, see [SERVER-UPDATE.md](SERVER-UPDATE.md).
+
 Written for the Lightsail "LAMP" blueprint, which is Bitnami-based (Apache in `/opt/bitnami/apache`, PHP in `/opt/bitnami/php`,
 database in `/opt/bitnami/mariadb` or `/opt/bitnami/mysql`, web user `daemon`). On a plain Ubuntu/Debian LAMP stack the paths differ
 (`/etc/apache2`, user `www-data`) but the steps are the same. **Check what you actually have first:**
@@ -259,13 +261,29 @@ sudo -u www-data php yii migrate --interactive=0       # webhook_endpoint, webho
 
 Each run prints new events, queued and delivered batches, failures and pruned rows. The server needs outbound HTTPS (port 443) to customers' endpoints. Leave `WEBHOOKS_ALLOW_PRIVATE` unset.
 
+## 7f. Saved-search alerts (cron)
+
+`php yii alerts/send` emails each saved search's new matches (see Saved-search alerts in the README). Run the migration once, then each
+morning in the web user's crontab. `CRON_TZ` makes 07:00 New York time (the `REPORT_TZ` day the command uses):
+
+```bash
+sudo -u www-data php yii migrate --interactive=0       # saved_search
+```
+
+```cron
+CRON_TZ=America/New_York
+0 7 * * * cd /var/www/entityindex && php yii alerts/send >> runtime/logs/alerts.log 2>&1
+```
+
+Put these two lines last: `CRON_TZ` applies to every entry after it. A second run the same day sends nothing. Emails only reach people once `MAIL_DSN` is set (SERVER-UPDATE.md, section 3).
+
 ## 8. Launch checklist
 
 1. `SITE_MODE=coming_soon` until the real data pipeline is loading; check `/coming-soon`, `/opt-out`, `/legal/terms`.
 2. Switch to `SITE_MODE=live`, **and `SITE_NOINDEX=false` when you want search engines in** (until then every page has `<meta name="robots" content="noindex,nofollow">` and an `X-Robots-Tag` header), then `php yii cache/flush-all`.
 3. Add the `Sitemap:` line back to `web/robots.txt` and submit `https://entityindex.com/sitemap.xml` in Google Search Console. `web/robots.txt` hard-codes the sitemap URL for entityindex.com; edit it if the domain differs.
 4. Have the lawyer review `/legal/privacy` and `/legal/terms`.
-5. Configure real outgoing mail in `config/mail.php` (it writes to `runtime/mail` until then), so password reset emails reach customers.
+5. Set `MAIL_DSN` in `.env` (mail is written to `runtime/mail` until then), so password reset emails reach customers. See SERVER-UPDATE.md, sections 3 and 4.
 
 ## Automatic deploys (GitHub Actions → SFTP)
 

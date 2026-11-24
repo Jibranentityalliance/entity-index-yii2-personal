@@ -53,7 +53,7 @@ API keys and the read-only REST API are documented in the **API** section below.
 
 ## Email and password reset
 
-Mail goes through `Yii::$app->mailer` (`config/mail.php`, shared by web and console) and `app\services\Mail`, which renders an HTML and a text part from `mail/` with the layouts in `mail/layouts`. **No mail server is configured yet:** the mailer uses file transport, so every message is written to `runtime/mail/*.eml` instead of being sent; open one in a mail client or text editor to read it. The sender is `ADMIN_EMAIL` with the name EntityIndex. Connecting a real provider later means replacing `useFileTransport` in `config/mail.php` with a `transport` DSN; nothing else changes.
+Mail goes through `Yii::$app->mailer` (`config/mail.php`, shared by web and console) and `app\services\Mail`, which renders an HTML and a text part from `mail/` with the layouts in `mail/layouts`. **Until `MAIL_DSN` is set** the mailer uses file transport, so every message is written to `runtime/mail/*.eml` instead of being sent; open one in a mail client or text editor to read it. Setting `MAIL_DSN` (an SMTP DSN such as `smtp://user:pass@smtp.example.com:587`) sends real mail; nothing else changes. The sender is `ADMIN_EMAIL` with the name EntityIndex.
 
 **Password reset.** Sign in has a Forgot your password? link to `/portal/auth/forgot`. The page always answers the same way whether or not the email has an account, sends at most one link a minute per account, and allows 5 requests per IP per 15 minutes. The link (`/portal/auth/reset?token=…`) works once, for an hour (`User::RESET_TTL`); only a SHA-256 hash of the token is stored (`user.password_reset_hash`, `password_reset_expires_at`), and the page sends no referrer. Choosing a new password clears the token, rotates `auth_key` (signing the account out everywhere else, remember-me cookies included) and mails a password-changed notice. Changing the password in Account settings does the same. Disabled accounts get no link.
 
@@ -106,6 +106,12 @@ Business, Data license and admin accounts can create up to 5 keys at `/portal/ap
 
 List filters: `q`, `state` (2 letters), `type`, `status`, `county`, `filed_after` and `filed_before` (dates, both inclusive), `order` (`desc` default, `asc` for incremental syncs), `limit` (1 to 1000, default 100), `cursor`. Take `next_cursor` from a response and send it as `cursor` for the next page until `has_more` is false. Paging walks company ids, so it stays fast and stable on any number of rows, and new companies never shift pages already read. **API limits are not final and are meant to be changed.** They live in one place, `config/params.php`, under `apiLimits`, per plan (`business`, `bulk`; admins are unlimited): `monthlyCalls` (requests a calendar month, UTC), `monthlyRows` (companies returned a calendar month, the "export rows" cap from the pricing page) and `perMinute` (requests a minute). Edit the numbers there and nothing else; the keys page, the API headers and the docs page all read them. Current placeholders: Business 25,000 calls, 50,000 rows and 120 a minute; Data license 500,000 calls, 5,000,000 rows and 600 a minute. Every response carries `X-RateLimit-*` (per minute), `X-Quota-*` (calls in the month) and `X-Rows-*` (rows in the month) headers. The row cap is hard: a list request is cut short when fewer rows are left than it asked for, and once none are left every call returns `429` with `Retry-After`. Going over any limit returns `429`; calls rejected by the per-minute limit are not counted. Usage is shown on the API keys page and in `/api/v1/me`. The key is only stored as a hash, so a lost key cannot be recovered.
 
+## Saved-search alerts
+
+Pro, Business, Data license and admin accounts can save up to 10 searches (`maxSearches`) from the Companies page (**Save search**: keywords, state, county, entity type and status; the filing date range is left out) and manage them at `/portal/alerts`: rename, turn emails on or off, delete. A search is stored once per account (`saved_search.params_hash`). Free accounts see the Alerts page with an upgrade message.
+
+`php yii alerts/send` (cron, once each morning) emails every saved search with emails on whose owner is active and on a paid plan. Each search keeps a `cursor_at`: the email lists the companies whose `publish_at` falls after it (so held companies are never mailed early), newest filing first, up to `emailRows` (25) with a link to the full search, and the cursor then moves to the run time. No matches, no email. A search is handled once per `reportTz` day (`last_run_on`), so running the command again the same day sends nothing; `--force` ignores that. Turning emails back on moves the cursor to now, so there is no backlog. Every email has a link (`/portal/alerts/unsubscribe?token=…`, also sent as `List-Unsubscribe`) that stops emails for that one search without signing in; the page asks for a click first, so mail scanners opening the link change nothing. Settings are in `config/params.php` under `alerts`.
+
 ## Webhooks
 
 Business, Data license and admin accounts can add up to 5 endpoints at `/portal/webhooks` (`maxEndpoints`). Each endpoint has a URL, an optional description, optional state and entity-type filters, and a signing secret (`whsec_…`, shown on the endpoint page, replaceable). Customer documentation (payload, headers, signature check in Python) is the Webhooks card on `/portal/api-docs`.
@@ -128,6 +134,8 @@ Only https URLs on public addresses are accepted; the host is resolved at send t
 | `DB_PASS` | MySQL password (may be empty) |
 | `COOKIE_VALIDATION_KEY` | **required**: long random string |
 | `SITE_URL` | **required**: canonical URL used in sitemaps, canonical links, JSON-LD |
+| `ADMIN_EMAIL` | sender of every email and recipient of contact messages |
+| `MAIL_DSN` | SMTP DSN for outgoing mail, e.g. `smtp://user:pass@smtp.example.com:587`; unset writes mail to `runtime/mail` |
 | `ENV_FILE` | optional (real environment only): path of the env file, default `./.env` |
 | `SITE_NOINDEX` | `true` (default): meta robots tag + `X-Robots-Tag: noindex, nofollow` on every response. Set `false` at launch |
 | `BULK_DIR` | optional: folder for the bulk data files, default `runtime/bulk`; keep it outside the web root |
@@ -155,6 +163,8 @@ tests/run.php      integration tests
 ```
 
 ## Deployment
+
+**Updating the server:** [docs/SERVER-UPDATE.md](docs/SERVER-UPDATE.md) lists what the production server needs for the work after commit `c5dcb99`: migrations, `.env` settings, new cron jobs, mail and X-Sendfile.
 
 Pushes to `main` deploy automatically over SFTP after the tests pass: see **Automatic deploys** in [docs/DEPLOY.md](docs/DEPLOY.md). The deploy never touches `.env`, `config/db.php`, `runtime/` or `web/assets/` on the server.
 
