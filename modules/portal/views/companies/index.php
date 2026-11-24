@@ -8,6 +8,7 @@
 
 use app\helpers\Fmt;
 use app\helpers\States;
+use app\models\SavedSearch;
 use yii\helpers\Html;
 use yii\helpers\Url;
 
@@ -108,6 +109,11 @@ $hrefFor = function (int $p) use ($params): string {
             <?php if ($st): ?> in <?= $params['county'] ? Html::encode($params['county']) . ' County, ' : '' ?><?= Html::encode($st['name']) ?><?php endif ?>
         </h3>
         <div class="card-tools">
+            <?php if ($free !== null): ?>
+                <a href="<?= Url::to(['/portal/alerts/index']) ?>" class="btn btn-sm btn-default mr-1"><i class="fas fa-lock"></i> Alerts are a Pro feature</a>
+            <?php else: ?>
+                <button type="button" class="btn btn-sm btn-default mr-1" data-toggle="modal" data-target="#save-search-modal"><i class="fas fa-bell"></i> Save search</button>
+            <?php endif ?>
             <?php if ($export === null): ?>
                 <a href="<?= Url::to(['/pricing/index']) ?>" class="btn btn-sm btn-default"><i class="fas fa-lock"></i> Export CSV is a Pro feature</a>
             <?php elseif ($export['allowance'] < 1): ?>
@@ -122,6 +128,56 @@ $hrefFor = function (int $p) use ($params): string {
     </div>
     <?= $this->render('/_partials/pager', ['page' => $res['page'], 'pageSize' => $res['pageSize'], 'total' => $res['total'], 'hrefFor' => $hrefFor]) ?>
 </div>
+
+<?php if ($free === null): ?>
+<?php $alertFilters = SavedSearch::cleanFilters($params); ?>
+<div class="modal fade" id="save-search-modal" tabindex="-1" role="dialog" aria-labelledby="save-search-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <?= Html::beginForm(['/portal/alerts/create'], 'post') ?>
+            <?php foreach ($alertFilters as $k => $v): ?>
+                <input type="hidden" name="filters[<?= Html::encode($k) ?>]" value="<?= Html::encode($v) ?>">
+            <?php endforeach ?>
+            <div class="modal-header">
+                <h5 class="modal-title" id="save-search-modal-title">Save search</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="save-search-name">Name</label>
+                    <input type="text" class="form-control" id="save-search-name" name="name" maxlength="100" required value="<?= Html::encode(SavedSearch::describe($alertFilters)) ?>">
+                </div>
+                <div class="ei-summary mb-3">
+                    <span class="ei-summary-label">Matches</span>
+                    <?php $alertRows = array_filter(array_intersect_key($filterRows, array_flip(['Keywords', 'State', 'County', 'Entity type', 'Status']))); ?>
+                    <?php if ($alertRows): ?>
+                        <dl>
+                            <?php foreach ($alertRows as $label => $value): ?>
+                                <dt><?= Html::encode($label) ?></dt><dd><?= Html::encode($value) ?></dd>
+                            <?php endforeach ?>
+                        </dl>
+                    <?php else: ?>
+                        <span>Every new company</span>
+                    <?php endif ?>
+                </div>
+                <?php if ($params['from'] || $params['to']): ?>
+                    <p class="text-muted small">The filing date range is not saved: alerts always look at companies that went public since the last email.</p>
+                <?php endif ?>
+                <div class="custom-control custom-checkbox">
+                    <input type="hidden" name="email" value="0">
+                    <input type="checkbox" class="custom-control-input" id="save-search-email" name="email" value="1" checked>
+                    <label class="custom-control-label font-weight-normal" for="save-search-email">Email me each morning when there are new matches</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-bell"></i> Save search</button>
+            </div>
+            <?= Html::endForm() ?>
+        </div>
+    </div>
+</div>
+<?php endif ?>
 
 <?php if ($export !== null && $export['allowance'] >= 1 && $res['total'] > 0): ?>
 <div class="modal fade" id="export-modal" tabindex="-1" role="dialog" aria-labelledby="export-modal-title" aria-hidden="true">

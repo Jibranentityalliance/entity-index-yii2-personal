@@ -29,6 +29,11 @@ return [
     //   monthlyRows   companies returned per calendar month; a request is cut short at the cap, then 429
     //   perMinute     requests per minute
     // The portal API pages, the API headers and the docs page all read these values.
+    'alerts' => [
+        'maxSearches' => 10,
+        'emailRows' => 25,
+    ],
+
     'webhooks' => [
         'maxEndpoints' => 5,
         'batchSize' => 100,

@@ -22,6 +22,7 @@ $nav = [
     ['Dashboard', 'fa-tachometer-alt', ['/portal/default/index'], 'portal/default'],
     ['Companies', 'fa-building', ['/portal/companies/index'], 'portal/companies'],
     ['States', 'fa-map', ['/portal/states/index'], 'portal/states'],
+    ['Alerts', 'fa-bell', ['/portal/alerts/index'], 'portal/alerts'],
     ['API keys', 'fa-key', ['/portal/api-keys/index'], 'portal/api-keys'],
     ['Webhooks', 'fa-bolt', ['/portal/webhooks/index'], 'portal/webhooks'],
     ['API docs', 'fa-book', ['/portal/api-docs/index'], 'portal/api-docs'],

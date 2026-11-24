@@ -26,6 +26,11 @@ return [
         'dbEinSkipTracing' => $dbEinSkipTracing,
         'mutex' => \yii\mutex\FileMutex::class,
         'mailer' => require __DIR__ . '/mail.php',
+        'urlManager' => (require __DIR__ . '/url.php') + [
+            'scriptUrl' => '/index.php',
+            'baseUrl' => '',
+            'hostInfo' => $params['siteUrl'],
+        ],
     ],
     'params' => $params,
     'controllerMap' => [

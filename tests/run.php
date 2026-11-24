@@ -1002,5 +1002,67 @@ array_map('unlink', glob("$recvDir/*") ?: []);
 @rmdir($recvDir);
 
 
+echo "Saved-search alerts\n";
+$srvA = startServer(18092, $env, $root);
+$alertRun = fn(string $extra = '') => $capture('php yii alerts/send' . $extra, $env);
+$af = new Http('http://127.0.0.1:18092');
+$af->postForm('/portal/auth/register', ['RegisterForm' => ['name' => 'Free Alerts', 'email' => 'free-alerts@example.com', 'password' => 'password1', 'password_repeat' => 'password1']]);
+check('alerts: a free account sees the upgrade message', str_contains($af->get('/portal/alerts')['body'], 'Alerts are not part of your plan'));
+check('alerts: a free account cannot save a search', $af->postForm('/portal/alerts/create', ['filters' => ['state' => 'OH']], '/portal/alerts')['status'] === 403);
+
+$a = new Http('http://127.0.0.1:18092');
+$a->postForm('/portal/auth/register', ['RegisterForm' => ['name' => 'Alice Alerts', 'email' => 'alerts@example.com', 'password' => 'password1', 'password_repeat' => 'password1']]);
+$pdo->exec("UPDATE `user` SET plan = 'pro' WHERE email = 'alerts@example.com'");
+$r = $a->get('/portal/companies?state=OH&type=LLC');
+check('alerts: the Companies page offers Save search and the sidebar links to Alerts', str_contains($r['body'], 'save-search-modal') && str_contains($r['body'], '/portal/alerts'));
+$r = $a->postForm('/portal/alerts/create', ['name' => 'Ohio LLCs', 'email' => '1', 'filters' => ['state' => 'oh', 'type' => 'LLC', 'from' => '2026-01-01']], '/portal/companies');
+$ss = $pdo->query("SELECT s.* FROM saved_search s JOIN `user` u ON u.id = s.user_id WHERE u.email = 'alerts@example.com'")->fetch(PDO::FETCH_ASSOC);
+check('alerts: a search is saved with its filters and without the date range', $r['status'] === 302 && $ss && $ss['name'] === 'Ohio LLCs' && json_decode($ss['params'], true) === ['state' => 'OH', 'type' => 'LLC'] && (int) $ss['email_enabled'] === 1);
+$ssId = (int) ($ss['id'] ?? 0);
+$a->postForm('/portal/alerts/create', ['name' => 'Again', 'filters' => ['type' => 'LLC', 'state' => 'OH']], '/portal/companies');
+check('alerts: the same search is not saved twice', (int) $pdo->query("SELECT COUNT(*) FROM saved_search WHERE user_id = {$ss['user_id']}")->fetchColumn() === 1);
+check('alerts: another account cannot change it', $af->postForm("/portal/alerts/toggle?id=$ssId", [], '/portal/alerts')['status'] === 403);
+
+$pdo->exec("UPDATE saved_search SET cursor_at = UTC_TIMESTAMP() - INTERVAL 1 HOUR WHERE id = $ssId");
+$ains = fn(string $state, string $no, string $name, string $type, string $publish) => $pdo->exec("INSERT INTO entities (state, state_filing_number, url_key, slug, name, entity_type, status, filed_at, indexed_at, publish_at)
+    VALUES ('$state', '$no', '" . strtolower($no) . "', '" . strtolower($no) . "-alert', '$name', '$type', 'Active', '2026-11-01 00:00:00', UTC_TIMESTAMP(), $publish)") ? (int) $pdo->lastInsertId() : 0;
+$amade = [
+    $ains('OH', 'A1', 'ALERT OHIO LLC', 'LLC', 'UTC_TIMESTAMP() - INTERVAL 10 MINUTE'),
+    $ains('FL', 'A2', 'ALERT FLORIDA LLC', 'LLC', 'UTC_TIMESTAMP() - INTERVAL 10 MINUTE'),
+    $ains('OH', 'A3', 'ALERT OHIO CORP', 'Corporation', 'UTC_TIMESTAMP() - INTERVAL 10 MINUTE'),
+    $ains('OH', 'A4', 'ALERT HELD LLC', 'LLC', 'UTC_TIMESTAMP() + INTERVAL 1 DAY'),
+    $ains('OH', 'A5', 'ALERT OLD LLC', 'LLC', 'UTC_TIMESTAMP() - INTERVAL 2 DAY'),
+];
+$alertSince = time() - 1;
+[$code, $out] = $alertRun();
+$mail = mailsWith('alerts@example.com', $alertSince);
+$body = $mail[0] ?? '';
+check('alerts: the morning run emails the new matches once', $code === 0 && count($mail) === 1 && str_contains($body, '1 new company: Ohio LLCs') && str_contains($body, 'ALERT OHIO LLC'), $out);
+check('alerts: other states, other types, held and older companies are left out', !str_contains($body, 'ALERT FLORIDA LLC') && !str_contains($body, 'ALERT OHIO CORP') && !str_contains($body, 'ALERT HELD LLC') && !str_contains($body, 'ALERT OLD LLC'));
+check('alerts: the email links to the search and has an unsubscribe link and header', str_contains($body, '/portal/companies?') && str_contains($body, '/portal/alerts/unsubscribe?token=' . $ss['unsubscribe_token']) && stripos($body, 'List-Unsubscribe:') !== false);
+$alertRun();
+check('alerts: a second run the same day sends nothing', count(mailsWith('alerts@example.com', $alertSince)) === 1);
+
+$pdo->exec("UPDATE entities SET publish_at = UTC_TIMESTAMP() - INTERVAL 1 SECOND WHERE id = {$amade[3]}");
+$alertRun(' --force');
+$mail = mailsWith('ALERT HELD LLC', $alertSince);
+check('alerts: a held company is mailed after it goes public, and only it', count($mail) === 1 && !str_contains($mail[0], 'ALERT OHIO LLC'));
+
+$guest = new Http('http://127.0.0.1:18092');
+$r = $guest->get('/portal/alerts/unsubscribe?token=' . $ss['unsubscribe_token']);
+check('alerts: the unsubscribe link asks first and changes nothing on GET', $r['status'] === 200 && str_contains($r['body'], 'Stop alert emails?') && (int) $pdo->query("SELECT email_enabled FROM saved_search WHERE id = $ssId")->fetchColumn() === 1);
+$r = $guest->postForm('/portal/alerts/unsubscribe?token=' . $ss['unsubscribe_token'], []);
+check('alerts: confirming stops emails for that search without signing in', $r['status'] === 200 && str_contains($r['body'], 'Emails stopped') && (int) $pdo->query("SELECT email_enabled FROM saved_search WHERE id = $ssId")->fetchColumn() === 0);
+check('alerts: an unknown token is refused politely', str_contains($guest->get('/portal/alerts/unsubscribe?token=' . str_repeat('0', 32))['body'], 'Link not recognised'));
+$amade[] = $ains('OH', 'A6', 'ALERT MUTED LLC', 'LLC', 'UTC_TIMESTAMP() - INTERVAL 1 SECOND');
+$alertRun(' --force');
+check('alerts: a search with emails off gets nothing', !mailsWith('ALERT MUTED LLC', $alertSince));
+
+$r = $a->postForm("/portal/alerts/delete?id=$ssId", [], '/portal/alerts');
+check('alerts: deleting removes the saved search', $r['status'] === 302 && (int) $pdo->query("SELECT COUNT(*) FROM saved_search WHERE id = $ssId")->fetchColumn() === 0);
+
+$pdo->exec('DELETE FROM entities WHERE id IN (' . implode(',', array_filter($amade)) . ')');
+proc_terminate($srvA);
+
 echo "\n" . ($checks - $failures) . "/$checks checks passed" . ($failures ? ", $failures FAILED" : '') . ".\n";
 exit($failures ? 1 : 0);
