@@ -187,9 +187,10 @@ everything again: `nohup sudo -u www-data php yii mirror/backfill --restart > ru
 
 `php yii bulk/build` writes the daily bulk files for Data license accounts (see the Bulk data section of the README). It reads every published
 company in id order and writes gzipped CSVs, so it takes minutes and some CPU on millions of rows: run it when the site is quiet.
+The same run rebuilds the daily (last 7 days) and weekly (last 4 weeks) new-company files, which takes seconds.
 
 ```bash
-sudo -u daemon php yii migrate --interactive=0       # bulk_file, bulk_download (www-data on Debian)
+sudo -u daemon php yii migrate --interactive=0       # bulk_file, bulk_download, bulk_file.kind (www-data on Debian)
 sudo -u daemon php yii bulk/build                      # first build; prints the row count and size
 ```
 
@@ -197,8 +198,8 @@ sudo -u daemon php yii bulk/build                      # first build; prints the
 30 3 * * * cd /opt/bitnami/entityindex && php yii bulk/build >> runtime/logs/bulk.log 2>&1
 ```
 
-Files go to `runtime/bulk/YYYY-MM-DD/` (or `BULK_DIR`) and are never served directly. Disk use is about `keepDays` (7) times one day's
-files, so check `du -sh runtime/bulk` after the first build and lower `keepDays` in `config/params.php` if space is tight.
+Files go to `runtime/bulk/YYYY-MM-DD/`, `runtime/bulk/new-daily/` and `runtime/bulk/new-weekly/` (or under `BULK_DIR`) and are never served directly.
+Disk use is about `keepDays` (7) times one day's full files, about 8 GB at 6 million companies; the new-company files add under 0.1 GB, so check `du -sh runtime/bulk` after the first build and lower `keepDays` in `config/params.php` if space is tight.
 Run the cron job as the same user as the web server so the files are readable by it.
 
 **Downloads without any setup** work out of the box (`BULK_SENDFILE=php`): PHP streams each file. That ties up one PHP worker per running

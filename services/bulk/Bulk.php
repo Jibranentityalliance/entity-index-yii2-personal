@@ -8,7 +8,7 @@ class Bulk
 {
     public static function config(): array
     {
-        return (Yii::$app->params['bulk'] ?? []) + ['dir' => '@runtime/bulk', 'sendfile' => 'php', 'keepDays' => 7, 'downloadsPerDay' => 20];
+        return (Yii::$app->params['bulk'] ?? []) + ['dir' => '@runtime/bulk', 'sendfile' => 'php', 'keepDays' => 7, 'newDays' => 7, 'newWeeks' => 4, 'downloadsPerDay' => 20];
     }
 
     public static function store(): BulkStore

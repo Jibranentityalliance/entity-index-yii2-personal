@@ -56,7 +56,7 @@ class LocalBulkStore implements BulkStore
 
     private function path(string $key): string
     {
-        if (preg_match('~^\d{4}-\d{2}-\d{2}/[a-z0-9][a-z0-9.-]*$~', $key) !== 1) {
+        if (preg_match('~^(?:new-(?:daily|weekly)/)?\d{4}-\d{2}-\d{2}/[a-z0-9][a-z0-9.-]*$~', $key) !== 1) {
             throw new \InvalidArgumentException('Invalid bulk file key.');
         }
         return rtrim($this->dir, '/') . '/' . $key;

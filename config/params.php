@@ -68,6 +68,8 @@ return [
         'dir' => env('BULK_DIR', '@runtime/bulk'),
         'sendfile' => env('BULK_SENDFILE', 'php'),
         'keepDays' => 7,
+        'newDays' => 7,
+        'newWeeks' => 4,
         'downloadsPerDay' => 20,
     ],
 
@@ -90,7 +92,7 @@ return [
         ],
         [
             'id' => 'bulk', 'name' => 'Data license', 'price' => '$1,500+', 'per' => '/mo', 'for' => 'Data platforms, AI companies, list brokers',
-            'features' => ['Daily or weekly full-feed files', 'CSV or Parquet via S3/SFTP', 'Per-state or national', 'Redistribution license available'],
+            'features' => ['Daily full file of every company', 'Daily and weekly new-company files', 'Gzipped CSV, per-state or national', 'Redistribution license available'],
             'cta' => 'Talk to us', 'url' => ['/pricing/index', 'plan' => 'bulk', '#' => 'waitlist'],
         ],
     ],

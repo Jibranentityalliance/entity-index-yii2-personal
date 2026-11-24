@@ -22,6 +22,7 @@ $rows = [
     ['Business', true, 'Webhooks', 'Get new filings pushed to your server as signed JSON the moment they go public, filtered by state and entity type, with automatic retries.'],
     ['Business', true, 'API documentation', 'Endpoint reference with request parameters, response fields and examples, inside your account.'],
     ['Data license', true, 'Daily bulk files', 'A national file and one file per state, built every day and downloadable from your account.'],
+    ['Data license', true, 'New-company files', 'Only the companies that went public each day or each week, national and per state: the last 7 days and the last 4 weeks.'],
     ['All plans', true, 'Privacy controls', 'People can ask to have their details removed, and removed details disappear from pages, the API, exports and bulk files.'],
     ['Pro', false, 'Saved-search alerts', 'Save a search such as new LLCs in Broward County and get an email every morning with the new matches.'],
 

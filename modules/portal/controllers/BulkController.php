@@ -21,17 +21,19 @@ class BulkController extends PortalController
         return true;
     }
 
-    public function actionIndex(string $date = '')
+    public function actionIndex(string $kind = BulkCatalog::FULL, string $date = '')
     {
         $user = Yii::$app->user->identity;
         $catalog = new BulkCatalog(Yii::$app->db);
-        $dates = $catalog->dates();
+        $kind = in_array($kind, BulkCatalog::KINDS, true) ? $kind : BulkCatalog::FULL;
+        $dates = $catalog->dates($kind);
         $date = in_array($date, $dates, true) ? $date : ($dates[0] ?? null);
         $cap = $this->cap($user);
         return $this->render('index', [
+            'kind' => $kind,
             'dates' => $dates,
             'date' => $date,
-            'files' => $date === null ? [] : $catalog->files($date),
+            'files' => $date === null ? [] : $catalog->files($date, $kind),
             'cap' => $cap,
             'usedToday' => $catalog->downloadsToday($user->id),
         ]);
@@ -55,7 +57,7 @@ class BulkController extends PortalController
         $cap = $this->cap($user);
         if (!$resumed && $cap !== null && $catalog->downloadsToday($user->id) >= (int) $cap) {
             Yii::$app->session->setFlash('error', 'You have reached today\'s limit of ' . number_format((int) $cap) . ' downloads. It resets at midnight UTC.');
-            return $this->redirect(['index', 'date' => $file['build_date']]);
+            return $this->redirect(['index', 'kind' => $file['kind'], 'date' => $file['build_date']]);
         }
         $response = Bulk::store()->send($file['file_key'], $file['file_name']);
         if (!$resumed) {
