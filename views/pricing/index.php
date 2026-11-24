@@ -35,7 +35,7 @@ $faq = array_slice(require Yii::getAlias('@app/config/faq.php'), 0, 4);
         <div class="row g-5">
         <div class="col-lg-6">
             <h2 class="h4">API preview</h2>
-            <p class="text-muted">Every new filing as JSON, within 24 hours. Webhooks push new matches for your saved searches.</p>
+            <p class="text-muted">Every new filing as JSON, within 24 hours. Webhooks push new filings to your server, filtered by state and entity type.</p>
             <pre class="api-sample">GET /v1/entities?state=FL&amp;filed_after=2026-09-28&amp;type=LLC
 Authorization: Bearer ei_live_…
 

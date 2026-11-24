@@ -19,11 +19,12 @@ $rows = [
     ['Pro', true, 'CSV export', 'Export any search, with its filters, as a CSV file for your CRM or dialer, within a monthly row allowance.'],
     ['Business', true, 'REST API', 'Query entities as JSON by state, type, status and filing date, look up a company by state and filing number, and page through results with a cursor.'],
     ['Business', true, 'API keys and quotas', 'Create and revoke your own keys. Every response carries rate-limit and monthly quota headers, and usage shows in your dashboard.'],
+    ['Business', true, 'Webhooks', 'Get new filings pushed to your server as signed JSON the moment they go public, filtered by state and entity type, with automatic retries.'],
     ['Business', true, 'API documentation', 'Endpoint reference with request parameters, response fields and examples, inside your account.'],
     ['Data license', true, 'Daily bulk files', 'A national file and one file per state, built every day and downloadable from your account.'],
     ['All plans', true, 'Privacy controls', 'People can ask to have their details removed, and removed details disappear from pages, the API, exports and bulk files.'],
     ['Pro', false, 'Saved-search alerts', 'Save a search such as new LLCs in Broward County and get an email every morning with the new matches.'],
-    ['Business', false, 'Webhooks', 'Receive new filings that match your saved searches as they are indexed.'],
+
 ];
 ?>
 <div class="container">

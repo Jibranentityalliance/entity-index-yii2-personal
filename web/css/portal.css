@@ -558,3 +558,71 @@ body.ei-portal.login-page { background: var(--ei-canvas) !important; }
 .ei-portal .flatpickr-day.startRange.startRange + .endRange:not(:nth-child(7n+1)),
 .ei-portal .flatpickr-day.endRange.startRange + .endRange:not(:nth-child(7n+1)) { box-shadow: -10px 0 0 var(--ei-primary); }
 .ei-portal .flatpickr-day.week.selected { box-shadow: none; }
+
+.ei-portal .ts-wrapper.multi .ts-control,
+.ei-portal .ts-wrapper.multi.has-items .ts-control,
+.ei-portal .ts-wrapper.single .ts-control {
+  min-height: 40px;
+  padding: 6px 36px 6px 6px;
+  align-items: center;
+  background: var(--ei-bg);
+  border: 1px solid var(--ei-border-input);
+  border-radius: var(--ei-r-input);
+  color: var(--ei-text);
+  font-size: 14px;
+  box-shadow: none;
+  gap: 4px;
+}
+.ei-portal .ts-wrapper.focus .ts-control { border-color: var(--ei-text); box-shadow: 0 0 0 3px var(--ei-accent-soft); }
+.ei-portal .ts-wrapper .ts-control > input { color: var(--ei-text); font-size: 14px; min-width: 6rem; margin: 0 0 0 6px !important; padding: 0; line-height: 24px; }
+.ei-portal .ts-wrapper .ts-control > input::placeholder { color: var(--ei-text-3); opacity: 1; }
+.ei-portal .ts-wrapper.multi .ts-control > .item {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  padding: 1px 3px 1px 10px !important;
+  background: var(--ei-accent-soft);
+  border: 1px solid var(--ei-accent-border);
+  border-radius: var(--ei-r-pill);
+  color: var(--ei-text);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 22px;
+}
+.ei-portal .ts-wrapper.multi .ts-control > .item.active { background: var(--ei-accent); border-color: var(--ei-accent); color: var(--ei-on-primary); }
+.ei-portal .ts-wrapper.plugin-remove_button:not(.rtl) .item .remove,
+.ei-portal .ts-wrapper.plugin-remove_button .item .remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  margin-left: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: var(--ei-text-3);
+  font-size: 14px;
+  line-height: 1;
+}
+.ei-portal .ts-wrapper.plugin-remove_button .item .remove:hover { background: var(--ei-hover); color: var(--ei-text); }
+.ei-portal .ts-wrapper.plugin-clear_button .clear { right: 12px; color: var(--ei-text-3); font-size: 18px; }
+.ei-portal .ts-wrapper.plugin-clear_button .clear:hover { color: var(--ei-text); }
+.ei-portal .ts-dropdown {
+  margin-top: 4px;
+  background: var(--ei-bg);
+  border: 1px solid var(--ei-border-input);
+  border-radius: var(--ei-r-input);
+  box-shadow: var(--ei-shadow);
+  color: var(--ei-text);
+  font-size: 14px;
+  overflow: hidden;
+  z-index: 1060;
+}
+.ei-portal .ts-dropdown .ts-dropdown-content { max-height: 260px; padding: 4px; }
+.ei-portal .ts-dropdown .option { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 6px; color: var(--ei-text); }
+.ei-portal .ts-dropdown .option.active { background: var(--ei-hover); color: var(--ei-text); }
+.ei-portal .ts-dropdown .option.selected { color: var(--ei-text); }
+.ei-portal .ts-dropdown .no-results { padding: 8px 10px; color: var(--ei-text-3); }
+.ei-portal .ts-dropdown.plugin-checkbox_options .option input[type="checkbox"] { margin: 0; accent-color: var(--ei-accent); width: 15px; height: 15px; }
+.ei-portal .ts-dropdown.plugin-checkbox_options .option.selected { background: var(--ei-accent-soft); }

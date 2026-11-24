@@ -168,6 +168,37 @@ while True:
     </div>
 </div>
 
+<div class="card" id="webhooks">
+    <div class="card-header"><h3 class="card-title">Webhooks</h3></div>
+    <div class="card-body">
+        <p>Instead of polling, add an endpoint on the <a href="<?= Url::to(['/portal/webhooks/index']) ?>">Webhooks</a> page and we send new companies to it as soon as they go public. Each endpoint can be limited to some states and entity types. Companies are sent once, in batches of up to <?= (int) Yii::$app->params['webhooks']['batchSize'] ?>, usually within a minute or two.</p>
+        <p class="mb-2">Each delivery is a <code>POST</code> with a JSON body. <code>data</code> holds companies in the same shape as the list endpoint:</p>
+<pre class="mb-3"><code>{
+  "id": "dlv_1042",
+  "event": "entities.published",
+  "created_at": "2026-11-25T14:02:11Z",
+  "count": 2,
+  "data": [ { "id": 812345, "state": "FL", "name": "Coastal Roofing LLC", ... } ]
+}</code></pre>
+        <p class="mb-2">Headers:</p>
+        <ul>
+            <li><code>X-EntityIndex-Event</code>: <code>entities.published</code>, or <code>test</code> for a test event (its company is a fixed example).</li>
+            <li><code>X-EntityIndex-Delivery</code>: the delivery id. Retries keep the same id, so use it to ignore duplicates.</li>
+            <li><code>X-EntityIndex-Signature</code>: <code>t=TIMESTAMP,v1=SIGNATURE</code>, where SIGNATURE is the hex HMAC-SHA256 of <code>TIMESTAMP + "." + raw body</code>, keyed with the endpoint's signing secret.</li>
+        </ul>
+        <p class="mb-2">Check the signature against the raw body before parsing it, and reject old timestamps:</p>
+<pre class="mb-3"><code>import hashlib, hmac, time
+
+def verify(secret, header, body):
+    parts = dict(p.split("=", 1) for p in header.split(","))
+    signed = parts["t"] + "." + body.decode()
+    expected = hmac.new(secret.encode(), signed.encode(), hashlib.sha256).hexdigest()
+    fresh = abs(time.time() - int(parts["t"])) &lt; 300
+    return fresh and hmac.compare_digest(expected, parts["v1"])</code></pre>
+        <p class="mb-0">Answer with any 2xx status within <?= (int) Yii::$app->params['webhooks']['timeout'] ?> seconds; do slow work after answering. Anything else, a timeout or a redirect counts as a failure and is retried after 1 minute, 5 minutes, 30 minutes, then 2, 6, 12 and 24 hours. After <?= (int) Yii::$app->params['webhooks']['disableAfterFailures'] ?> failures in a row the endpoint is turned off until you resume it; nothing is lost while it is off or paused. Endpoints must use https and a public address. Companies that are held again or removed before a delivery goes out are left out of it.</p>
+    </div>
+</div>
+
 <div class="row">
     <div class="col-lg-6">
         <div class="card">

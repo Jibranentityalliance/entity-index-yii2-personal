@@ -244,6 +244,20 @@ The Lightsail plan's monthly transfer allowance is the real limit for downloads:
 Check the plan's allowance in the Lightsail console before promising daily downloads, and see `BulkStore` in the README for moving the
 files to S3 or R2 when that becomes the constraint.
 
+## 7e. Webhooks (cron)
+
+`php yii webhooks/run` finds companies that just went public, queues them for each customer webhook endpoint and sends due deliveries (see the Webhooks section of the README). Run the migration once, then every minute in the web user's crontab:
+
+```bash
+sudo -u www-data php yii migrate --interactive=0       # webhook_endpoint, webhook_event, webhook_delivery
+```
+
+```cron
+* * * * * cd /var/www/entityindex && php yii webhooks/run >> runtime/logs/webhooks.log 2>&1
+```
+
+Each run prints new events, queued and delivered batches, failures and pruned rows. The server needs outbound HTTPS (port 443) to customers' endpoints. Leave `WEBHOOKS_ALLOW_PRIVATE` unset.
+
 ## 8. Launch checklist
 
 1. `SITE_MODE=coming_soon` until the real data pipeline is loading; check `/coming-soon`, `/opt-out`, `/legal/terms`.

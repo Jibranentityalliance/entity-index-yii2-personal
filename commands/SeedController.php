@@ -152,6 +152,50 @@ class SeedController extends Controller
         return ExitCode::OK;
     }
 
+    public function actionWebhookDemo(int $count = 3, string $state = '', string $type = ''): int
+    {
+        $db = Yii::$app->db;
+        $query = (new \yii\db\Query())->from('entities')->where(['publish_override' => null, 'people_hidden' => 0]);
+        if ($state !== '') {
+            $query->andWhere(['state' => strtoupper($state)]);
+        }
+        if ($type !== '') {
+            $query->andWhere(['entity_type' => $type]);
+        }
+        $sources = $query->orderBy(new \yii\db\Expression('RAND()'))->limit(max(1, $count))->all();
+        if (!$sources) {
+            $this->stderr("No companies match state '$state' and type '$type'.\n", Console::FG_RED);
+            return ExitCode::DATAERR;
+        }
+        $now = gmdate('Y-m-d H:i:s');
+        foreach ($sources as $row) {
+            $filing = $row['state'] . 'DEMO' . random_int(100000, 999999);
+            $people = (new \yii\db\Query())->from('people')->where(['entity_id' => $row['id']])->all();
+            unset($row['id']);
+            $row = array_merge($row, [
+                'source_id' => null,
+                'state_filing_number' => $filing,
+                'url_key' => strtolower($filing),
+                'formation_date' => gmdate('Y-m-d'),
+                'filed_at' => gmdate('Y-m-d H:i:s', time() - 3600),
+                'indexed_at' => $now,
+                'publish_at' => $now,
+                'updated_at' => $now,
+            ]);
+            $db->createCommand()->insert('entities', $row)->execute();
+            $id = (int) $db->getLastInsertID();
+            foreach ($people as $person) {
+                unset($person['id']);
+                $person['entity_id'] = $id;
+                $db->createCommand()->insert('people', $person)->execute();
+            }
+            $this->stdout("#$id {$row['name']} ({$row['state']}, {$row['entity_type']}, $filing)\n");
+        }
+        Yii::$app->cache->flush();
+        $this->stdout(count($sources) . " demo filings published now. Run php yii webhooks/run to send them.\n", Console::FG_GREEN);
+        return ExitCode::OK;
+    }
+
     private static function ts(string $iso): string
     {
         return (new \DateTimeImmutable($iso))->setTimezone(new \DateTimeZone('UTC'))->format('Y-m-d H:i:s');

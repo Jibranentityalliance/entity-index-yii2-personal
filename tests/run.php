@@ -881,6 +881,126 @@ $pdo->exec("UPDATE `user` SET password_reset_hash = " . $pdo->quote(hash('sha256
 check('reset: an expired token is refused', str_contains((new Http($rbase))->get('/portal/auth/reset?token=expired-token-0123456789-0123456789-0123456')['body'], 'expired or was already used'));
 proc_terminate($srvR);
 
+echo "Webhooks\n";
+$whEnv = ['WEBHOOKS_ALLOW_PRIVATE' => 'true'] + $env;
+$recvDir = sys_get_temp_dir() . '/ei-webhook-recv-' . getmypid();
+@mkdir($recvDir, 0700, true);
+file_put_contents("$recvDir/router.php", '<?php $d = __DIR__; $s = (int) (@file_get_contents("$d/status") ?: 200);'
+    . ' file_put_contents("$d/hits.jsonl", json_encode(["headers" => array_change_key_case(getallheaders()), "body" => file_get_contents("php://input")]) . "\n", FILE_APPEND);'
+    . ' http_response_code($s); echo "ok";');
+file_put_contents("$recvDir/status", '200');
+$recv = proc_open(['php', '-S', '127.0.0.1:18090', "$recvDir/router.php"], [1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']], $pipes, $recvDir);
+for ($i = 0; $i < 50 && !@fsockopen('127.0.0.1', 18090); $i++) {
+    usleep(100000);
+}
+$hits = function () use ($recvDir): array {
+    $out = [];
+    foreach (file("$recvDir/hits.jsonl", FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
+        $out[] = json_decode($line, true);
+    }
+    return $out;
+};
+$signed = function (array $hit, string $secret): bool {
+    $parts = [];
+    foreach (explode(',', (string) ($hit['headers']['x-entityindex-signature'] ?? '')) as $kv) {
+        [$k, $v] = array_pad(explode('=', $kv, 2), 2, '');
+        $parts[$k] = $v;
+    }
+    return isset($parts['t'], $parts['v1']) && hash_equals(hash_hmac('sha256', $parts['t'] . '.' . $hit['body'], $secret), $parts['v1']);
+};
+$whRun = fn() => $capture('php yii webhooks/run', $whEnv);
+$srvW = startServer(18089, $whEnv, $root);
+$srvW2 = startServer(18091, $env, $root);
+[$code, $out] = $whRun();
+check('webhooks: run works with no endpoints', $code === 0 && str_contains($out, 'new events'), $out);
+
+$free = new Http('http://127.0.0.1:18089');
+$free->postForm('/portal/auth/register', ['RegisterForm' => ['name' => 'Free Hooks', 'email' => 'free-hooks@example.com', 'password' => 'password1', 'password_repeat' => 'password1']]);
+check('webhooks: a free account sees the upgrade message', str_contains($free->get('/portal/webhooks')['body'], 'Webhooks are not part of your plan'));
+check('webhooks: a free account cannot add an endpoint', $free->postForm('/portal/webhooks/create', ['WebhookEndpoint' => ['url' => 'https://example.com/x']], '/portal/webhooks')['status'] === 403);
+
+$w = new Http('http://127.0.0.1:18089');
+$w->postForm('/portal/auth/register', ['RegisterForm' => ['name' => 'Hook Owner', 'email' => 'hooks@example.com', 'password' => 'password1', 'password_repeat' => 'password1']]);
+$pdo->exec("UPDATE `user` SET plan = 'business' WHERE email = 'hooks@example.com'");
+$r = $w->get('/portal/webhooks');
+check('webhooks: the page renders for a Business account and is in the sidebar', $r['status'] === 200 && str_contains($r['body'], 'Add an endpoint') && str_contains($r['body'], '/portal/webhooks'));
+$strict = new Http('http://127.0.0.1:18091');
+$strict->jar = $w->jar;
+foreach (['http://example.com/hook' => 'Use an https:// URL', 'https://10.0.0.5/hook' => 'public server', 'https://hooks.localhost/hook' => 'public server', 'https://user:pw@example.com/hook' => 'not a valid URL'] as $bad => $msg) {
+    $r = $strict->postForm('/portal/webhooks/create', ['WebhookEndpoint' => ['url' => $bad]], '/portal/webhooks');
+    check("webhooks: $bad is refused", $r['status'] === 200 && str_contains($r['body'], $msg));
+}
+$r = $w->postForm('/portal/webhooks/create', ['WebhookEndpoint' => ['url' => 'http://127.0.0.1:18090/hook', 'description' => 'Test receiver', 'stateList' => ['OH'], 'typeList' => ['LLC']]], '/portal/webhooks');
+$ep = $pdo->query("SELECT w.* FROM webhook_endpoint w JOIN `user` u ON u.id = w.user_id WHERE u.email = 'hooks@example.com'")->fetch(PDO::FETCH_ASSOC);
+check('webhooks: an endpoint is created with its filters and a secret', $r['status'] === 302 && $ep && $ep['states'] === 'OH' && json_decode($ep['types'], true) === ['LLC'] && str_starts_with($ep['secret'], 'whsec_'));
+$epId = (int) ($ep['id'] ?? 0);
+$secret = (string) ($ep['secret'] ?? '');
+check('webhooks: another account cannot open it', $free->get("/portal/webhooks/view?id=$epId")['status'] === 403);
+
+$r = $w->postForm("/portal/webhooks/test?id=$epId", [], "/portal/webhooks/view?id=$epId");
+$h = $hits();
+check('webhooks: a test event is delivered and signed', $r['status'] === 302 && count($h) === 1 && ($h[0]['headers']['x-entityindex-event'] ?? '') === 'test' && $signed($h[0], $secret)
+    && json_decode($h[0]['body'], true)['data'][0]['name'] === 'Example Roofing LLC');
+check('webhooks: a wrong secret does not verify', !$signed($h[0], 'whsec_wrong'));
+
+$ins = fn(string $state, string $no, string $name, string $type, string $publish) => $pdo->exec("INSERT INTO entities (state, state_filing_number, url_key, slug, name, entity_type, status, filed_at, indexed_at, publish_at)
+    VALUES ('$state', '$no', '" . strtolower($no) . "', '" . strtolower($no) . "-hook', '$name', '$type', 'Active', '2026-11-01 00:00:00', UTC_TIMESTAMP(), $publish)") ? (int) $pdo->lastInsertId() : 0;
+$made = [
+    $ins('OH', 'W1', 'HOOK OHIO LLC', 'LLC', 'UTC_TIMESTAMP() - INTERVAL 1 MINUTE'),
+    $ins('FL', 'W2', 'HOOK FLORIDA LLC', 'LLC', 'UTC_TIMESTAMP() - INTERVAL 1 MINUTE'),
+    $ins('OH', 'W3', 'HOOK OHIO CORP', 'Corporation', 'UTC_TIMESTAMP() - INTERVAL 1 MINUTE'),
+    $held = $ins('OH', 'W4', 'HOOK HELD LLC', 'LLC', 'UTC_TIMESTAMP() + INTERVAL 1 DAY'),
+];
+[$code, $out] = $whRun();
+$h = $hits();
+$last = $h ? json_decode(end($h)['body'], true) : [];
+$names = array_column($last['data'] ?? [], 'name');
+check('webhooks: new public filings that match are sent once, signed, in the API shape', $code === 0 && count($h) === 2 && ($last['event'] ?? '') === 'entities.published' && $names === ['HOOK OHIO LLC'] && $signed(end($h), $secret)
+    && isset($last['data'][0]['filing_number'], $last['data'][0]['people']) && str_starts_with((string) (end($h)['headers']['x-entityindex-delivery'] ?? ''), 'dlv_'), $out);
+check('webhooks: other states, other types and held companies are not sent', !in_array('HOOK FLORIDA LLC', $names, true) && !in_array('HOOK OHIO CORP', $names, true) && !in_array('HOOK HELD LLC', $names, true));
+$whRun();
+check('webhooks: a second run sends nothing new', count($hits()) === 2);
+
+$pdo->exec("UPDATE entities SET publish_at = UTC_TIMESTAMP() - INTERVAL 1 MINUTE WHERE id = $held");
+$whRun();
+$h = $hits();
+check('webhooks: a held company is sent when it goes public', count($h) === 3 && array_column(json_decode(end($h)['body'], true)['data'], 'name') === ['HOOK HELD LLC']);
+
+file_put_contents("$recvDir/status", '500');
+$made[] = $ins('OH', 'W5', 'HOOK RETRY LLC', 'LLC', 'UTC_TIMESTAMP() - INTERVAL 1 MINUTE');
+$whRun();
+$dl = $pdo->query("SELECT * FROM webhook_delivery WHERE endpoint_id = $epId ORDER BY id DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+check('webhooks: a failed delivery is kept for a retry later', $dl['status'] === 'pending' && (int) $dl['attempts'] === 1 && (int) $dl['response_code'] === 500 && $dl['next_attempt_at'] > gmdate('Y-m-d H:i:s')
+    && (int) $pdo->query("SELECT failure_count FROM webhook_endpoint WHERE id = $epId")->fetchColumn() === 1);
+file_put_contents("$recvDir/status", '200');
+$pdo->exec("UPDATE webhook_delivery SET next_attempt_at = UTC_TIMESTAMP() - INTERVAL 1 SECOND WHERE id = {$dl['id']}");
+$whRun();
+$h = $hits();
+check('webhooks: the retry succeeds with the same delivery id and resets the failure count', $pdo->query("SELECT status FROM webhook_delivery WHERE id = {$dl['id']}")->fetchColumn() === 'success'
+    && (end($h)['headers']['x-entityindex-delivery'] ?? '') === 'dlv_' . $dl['id'] && (int) $pdo->query("SELECT failure_count FROM webhook_endpoint WHERE id = $epId")->fetchColumn() === 0);
+
+$w->postForm("/portal/webhooks/pause?id=$epId", [], "/portal/webhooks/view?id=$epId");
+$made[] = $ins('OH', 'W6', 'HOOK PAUSED LLC', 'LLC', 'UTC_TIMESTAMP() - INTERVAL 1 MINUTE');
+$before = count($hits());
+$whRun();
+check('webhooks: a paused endpoint gets nothing', count($hits()) === $before);
+$w->postForm("/portal/webhooks/resume?id=$epId", [], "/portal/webhooks/view?id=$epId");
+$whRun();
+$h = $hits();
+check('webhooks: resuming catches up on what was missed', count($h) === $before + 1 && array_column(json_decode(end($h)['body'], true)['data'], 'name') === ['HOOK PAUSED LLC']);
+
+$r = $w->get("/portal/webhooks/view?id=$epId");
+check('webhooks: the endpoint page lists deliveries and the secret', $r['status'] === 200 && str_contains($r['body'], 'dlv_' . $dl['id']) && str_contains($r['body'], $secret));
+$r = $w->postForm("/portal/webhooks/delete?id=$epId", [], "/portal/webhooks/view?id=$epId");
+check('webhooks: deleting removes the endpoint and its deliveries', $r['status'] === 302 && (int) $pdo->query("SELECT COUNT(*) FROM webhook_delivery WHERE endpoint_id = $epId")->fetchColumn() === 0);
+
+$pdo->exec('DELETE FROM entities WHERE id IN (' . implode(',', array_filter($made)) . ')');
+proc_terminate($srvW);
+proc_terminate($srvW2);
+proc_terminate($recv);
+array_map('unlink', glob("$recvDir/*") ?: []);
+@rmdir($recvDir);
+
 
 echo "\n" . ($checks - $failures) . "/$checks checks passed" . ($failures ? ", $failures FAILED" : '') . ".\n";
 exit($failures ? 1 : 0);

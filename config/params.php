@@ -29,6 +29,17 @@ return [
     //   monthlyRows   companies returned per calendar month; a request is cut short at the cap, then 429
     //   perMinute     requests per minute
     // The portal API pages, the API headers and the docs page all read these values.
+    'webhooks' => [
+        'maxEndpoints' => 5,
+        'batchSize' => 100,
+        'timeout' => 10,
+        'retryAfter' => [60, 300, 1800, 7200, 21600, 43200, 86400],
+        'disableAfterFailures' => 50,
+        'eventWindowHours' => 72,
+        'keepDays' => 30,
+        'allowPrivate' => envBool('WEBHOOKS_ALLOW_PRIVATE', false),
+    ],
+
     'apiLimits' => [
         'business' => ['monthlyCalls' => 25000, 'monthlyRows' => 50000, 'perMinute' => 120],
         'bulk' => ['monthlyCalls' => 500000, 'monthlyRows' => 5000000, 'perMinute' => 600],
