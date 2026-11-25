@@ -24,6 +24,8 @@ class EntityRepository
     private const CACHE_TTL = 300;
     private const COUNT_CAP = 100000;
     private const WARM_TTL = 900;
+    private const SPARSE_CAP = 5000;
+    private const SPARSE_TTL = 3600;
     private const FILTERS = ['q', 'state', 'type', 'status', 'county', 'from', 'to', 'basic'];
 
     private static bool $refreshing = false;
@@ -82,15 +84,11 @@ class EntityRepository
         $key = null;
         if ($terms) {
             $key = preg_replace('/[^a-z0-9]/', '', strtolower($p['q']));
-            $matches = self::keywordMatches($p['q'], empty($p['basic']));
-            if ($matches !== null) {
-                $q->select('e.*')->innerJoin(['m' => $matches], 'm.id = e.id AND (m.via = 0 OR e.people_hidden = 0)');
+            $people = empty($p['basic']);
+            if (self::isSparse($p['q'], $people)) {
+                $q->select('e.*')->innerJoin(['m' => self::keywordMatches($p['q'], $people)], 'm.id = e.id AND (m.via = 0 OR e.people_hidden = 0)');
             } else {
-                $conds = ['or', self::termsCondition('e.name', $terms, 'n')];
-                if (strlen($key) >= 5) {
-                    $conds[] = ['e.url_key' => $key];
-                }
-                $q->andWhere($conds);
+                $q->andWhere(self::keywordScan($terms, $key, $people));
             }
         }
         return $q;
@@ -98,25 +96,72 @@ class EntityRepository
 
     public static function keywordMatches(string $text, bool $people = true, int $minKey = 5): ?Query
     {
+        $branches = self::keywordBranches($text, $people, $minKey);
+        if (!$branches) {
+            return null;
+        }
+        $union = array_shift($branches);
+        foreach ($branches as $b) {
+            $union->union($b, true);
+        }
+        return (new Query())->select(['id', 'via' => 'MIN(via)'])->from(['u' => $union])->groupBy('id');
+    }
+
+    private static function keywordBranches(string $text, bool $people, int $minKey): array
+    {
         $norm = self::normalize($text);
         $terms = $norm === '' ? [] : explode(' ', $norm);
         if (!array_filter($terms, fn(string $t) => self::fulltextTerm($t))) {
-            return null;
+            return [];
         }
         $key = preg_replace('/[^a-z0-9]/', '', strtolower($text));
-        $union = (new Query())->select(['id' => 'n.id', 'via' => new Expression('0')])->from(['n' => 'entities'])
-            ->where(self::termsCondition('n.name', $terms, 'kn'));
-        $union->union((new Query())->select(['id' => 'ae.id', 'via' => new Expression('1')])->from(['ra' => 'registered_agents'])
-            ->innerJoin(['ae' => 'entities'], 'ae.registered_agent_id = ra.id')->where(self::termsCondition('ra.name', $terms, 'ka')), true);
+        $out = [
+            (new Query())->select(['id' => 'n.id', 'via' => new Expression('0')])->from(['n' => 'entities'])
+                ->where(self::termsCondition('n.name', $terms, 'kn')),
+            (new Query())->select(['id' => 'ae.id', 'via' => new Expression('1')])->from(['ra' => 'registered_agents'])
+                ->innerJoin(['ae' => 'entities'], 'ae.registered_agent_id = ra.id')->where(self::termsCondition('ra.name', $terms, 'ka')),
+        ];
         if ($people) {
-            $union->union((new Query())->select(['id' => 'pe.entity_id', 'via' => new Expression('1')])->from(['pe' => 'people'])
-                ->where(self::termsCondition('pe.name', $terms, 'kp')), true);
+            $out[] = (new Query())->select(['id' => 'pe.entity_id', 'via' => new Expression('1')])->from(['pe' => 'people'])
+                ->where(self::termsCondition('pe.name', $terms, 'kp'));
         }
         if (strlen($key) >= $minKey) {
-            $union->union((new Query())->select(['id' => 'k.id', 'via' => new Expression('0')])->from(['k' => 'entities'])
-                ->where(['k.url_key' => $key]), true);
+            $out[] = (new Query())->select(['id' => 'k.id', 'via' => new Expression('0')])->from(['k' => 'entities'])->where(['k.url_key' => $key]);
         }
-        return (new Query())->select(['id', 'via' => 'MIN(via)'])->from(['u' => $union])->groupBy('id');
+        return $out;
+    }
+
+    private static function isSparse(string $text, bool $people): bool
+    {
+        $branches = self::keywordBranches($text, $people, 5);
+        if (!$branches) {
+            return false;
+        }
+        return (bool) self::remember('ei.sparse.' . md5(self::normalize($text) . '|' . (int) $people), ttl: self::SPARSE_TTL, fn: function () use ($branches) {
+            foreach ($branches as $b) {
+                if (count((clone $b)->limit(self::SPARSE_CAP + 1)->column()) > self::SPARSE_CAP) {
+                    return 0;
+                }
+            }
+            return 1;
+        });
+    }
+
+    private static function keywordScan(array $terms, string $key, bool $people): array
+    {
+        $conds = ['or', self::termsCondition('e.name', $terms, 'n')];
+        if (array_filter($terms, fn(string $t) => self::fulltextTerm($t))) {
+            $conds[] = new Expression('EXISTS (SELECT 1 FROM registered_agents ra WHERE ra.id = e.registered_agent_id AND e.people_hidden = 0 AND '
+                . self::termsSql('ra.name', $terms, 'a', $agentParams) . ')', $agentParams);
+            if ($people) {
+                $conds[] = new Expression('EXISTS (SELECT 1 FROM people pe WHERE pe.entity_id = e.id AND e.people_hidden = 0 AND '
+                    . self::termsSql('pe.name', $terms, 'p', $peopleParams) . ')', $peopleParams);
+            }
+        }
+        if (strlen($key) >= 5) {
+            $conds[] = ['e.url_key' => $key];
+        }
+        return $conds;
     }
 
     /** Most recent calendar day (YYYY-MM-DD, UTC) that has any filings, optionally per state. */
