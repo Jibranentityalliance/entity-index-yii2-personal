@@ -104,7 +104,7 @@ $hrefFor = function (int $p) use ($params): string {
 <div class="card">
     <div class="card-header">
         <h3 class="card-title">
-            <?= Fmt::num($res['total']) ?> <?= $res['total'] === 1 ? 'company' : 'companies' ?>
+            <?= Fmt::num($res['total']) ?><?= $res['more'] ? '+' : '' ?> <?= $res['total'] === 1 && !$res['more'] ? 'company' : 'companies' ?>
             <?= $q ? ' for “' . Html::encode($q) . '”' : '' ?>
             <?php if ($st): ?> in <?= $params['county'] ? Html::encode($params['county']) . ' County, ' : '' ?><?= Html::encode($st['name']) ?><?php endif ?>
         </h3>
@@ -196,7 +196,7 @@ $hrefFor = function (int $p) use ($params): string {
                     <div class="alert alert-danger d-none" id="export-error" role="alert"></div>
                     <div class="mb-4">
                         <div class="ei-big-number"><?= Fmt::num($exportRows) ?></div>
-                        <div class="text-muted"><?= $exportRows === 1 ? 'row' : 'rows' ?> will be exported<?= $exportRows < $res['total'] ? ' of ' . Fmt::num($res['total']) . ' matching' : '' ?>, newest filing first</div>
+                        <div class="text-muted"><?= $exportRows === 1 ? 'row' : 'rows' ?> will be exported<?= $exportRows < $res['total'] || $res['more'] ? ' of ' . Fmt::num($res['total']) . ($res['more'] ? '+' : '') . ' matching' : '' ?>, newest filing first</div>
                     </div>
                     <div class="ei-summary mb-3">
                         <span class="ei-summary-label">Filters</span>
@@ -210,7 +210,7 @@ $hrefFor = function (int $p) use ($params): string {
                             <span>None, every company</span>
                         <?php endif ?>
                     </div>
-                    <?php if ($exportRows < $res['total']): ?>
+                    <?php if ($exportRows < $res['total'] || $res['more']): ?>
                         <div class="alert alert-warning mb-3" role="alert"><?= $export['limit'] !== null && $export['limit'] - $export['used'] < $export['perFile'] ? 'Your remaining monthly allowance' : 'The per-file limit of ' . Fmt::num($export['perFile']) . ' rows' ?> cuts this file short. Narrow the filters to export the rest.</div>
                     <?php endif ?>
                     <?php if ($export['limit'] !== null): ?>

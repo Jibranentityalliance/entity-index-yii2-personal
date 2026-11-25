@@ -26,7 +26,8 @@ class AdminStats
 
         $cursor = (new Query())->from('mirror_state')->where(['name' => MirrorConverter::CURSOR])->one($this->db);
         $queue = (new Query())->select(['n' => 'COUNT(*)', 'oldest' => 'MIN(created_at)'])->from('mirror_changes')->one($this->db);
-        $latest = (new Query())->select(['converted' => 'MAX(updated_at)', 'indexed' => 'MAX(indexed_at)'])->from('entities')->one($this->db);
+        $converted = (new Query())->from('mirror_state')->where(['name' => [MirrorConverter::CURSOR, MirrorConverter::APPLIED]])->max('updated_at', $this->db);
+        $indexed = (new Query())->from('entities')->max('indexed_at', $this->db);
         $next = (new Query())->from('entities')->where(['>', 'publish_at', $now])->min('publish_at', $this->db);
         $soon = fn(string $until) => (int) (new Query())->from('entities')->where(['and', ['>', 'publish_at', $now], ['<=', 'publish_at', $until]])->count('*', $this->db);
 
@@ -39,8 +40,8 @@ class AdminStats
             'next_release_at' => $next,
             'live_within_1h' => $soon(gmdate('Y-m-d H:i:s', time() + 3600)),
             'live_within_24h' => $soon(gmdate('Y-m-d H:i:s', time() + 86400)),
-            'last_converted_at' => $latest['converted'],
-            'newest_indexed_at' => $latest['indexed'],
+            'last_converted_at' => $converted,
+            'newest_indexed_at' => $indexed,
             'cursor_id' => $cursor ? (int) $cursor['value'] : 0,
             'cursor_at' => $cursor['updated_at'] ?? null,
             'queued_changes' => (int) $queue['n'],
@@ -56,13 +57,13 @@ class AdminStats
     public function list(string $kind, int $page, int $size, string $q = ''): array
     {
         $query = $this->scoped($kind, gmdate('Y-m-d H:i:s'), $q)
-            ->select(['id', 'state', 'state_filing_number', 'name', 'entity_type', 'indexed_at', 'publish_at', 'publish_override'])
+            ->select(['entities.id', 'state', 'state_filing_number', 'name', 'entity_type', 'indexed_at', 'publish_at', 'publish_override'])
             ->limit($size)
             ->offset(max(0, ($page - 1) * $size));
         return match ($kind) {
-            self::COOLDOWN => $query->orderBy(['publish_at' => SORT_ASC, 'id' => SORT_ASC])->all($this->db),
-            self::PUBLISHED => $query->orderBy(['publish_at' => SORT_DESC, 'id' => SORT_DESC])->all($this->db),
-            default => $query->orderBy(['indexed_at' => SORT_DESC, 'id' => SORT_DESC])->all($this->db),
+            self::COOLDOWN => $query->orderBy(['publish_at' => SORT_ASC, 'indexed_at' => SORT_ASC, 'entities.id' => SORT_ASC])->all($this->db),
+            self::PUBLISHED => $query->orderBy(['publish_at' => SORT_DESC, 'indexed_at' => SORT_DESC, 'entities.id' => SORT_DESC])->all($this->db),
+            default => $query->orderBy(['indexed_at' => SORT_DESC, 'entities.id' => SORT_DESC])->all($this->db),
         };
     }
 
@@ -90,14 +91,18 @@ class AdminStats
             default => $query->where(['>', 'publish_at', $now]),
         };
         $q = trim($q);
-        if ($q !== '') {
-            $key = preg_replace('/[^a-z0-9]/', '', strtolower($q));
-            $match = ['or', ['like', 'name', addcslashes($q, '%_\\') . '%', false], ['state_filing_number' => $q]];
-            if (strlen($key) >= 3) {
-                $match[] = ['url_key' => $key];
-            }
-            $query->andWhere($match);
+        if ($q === '') {
+            return $query;
         }
-        return $query;
+        $matches = EntityRepository::keywordMatches($q, false, 3);
+        if ($matches !== null) {
+            return $query->innerJoin(['m' => $matches], 'm.id = entities.id');
+        }
+        $key = preg_replace('/[^a-z0-9]/', '', strtolower($q));
+        $match = ['or', ['like', 'name', addcslashes($q, '%_\\') . '%', false]];
+        if (strlen($key) >= 3) {
+            $match[] = ['url_key' => $key];
+        }
+        return $query->andWhere($match);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace app\commands;
 
+use app\services\EntityRepository;
 use app\services\MirrorStats;
 use Yii;
 use yii\console\Controller;
@@ -27,6 +28,7 @@ class StatsController extends Controller
         try {
             $p = Yii::$app->params;
             $s = (new MirrorStats(Yii::$app->db, $p['mirrorDb'], new \DateTimeZone($p['mirrorTz']), new \DateTimeZone($p['reportTz'])))->refresh();
+            $portal = EntityRepository::warmCaches();
         } catch (\Throwable $e) {
             Yii::error($e, __METHOD__);
             $this->stderr(gmdate('Y-m-d H:i:s') . ' stats/refresh failed: ' . get_class($e) . ': ' . $e->getMessage() . "\n", Console::FG_RED);
@@ -37,6 +39,8 @@ class StatsController extends Controller
         $this->stdout(sprintf("%s total %d, last 24h %d, last 7 days %d, states (30 days) %d, median lag %s days, newest %s\n",
             gmdate('Y-m-d H:i:s'), $s['total'], $s['last_24h'], $s['last_7d'], $s['states_30d'], $s['median_lag_days'] ?? '-', $s['newest_at'] ?? '-'),
             Console::FG_GREEN);
+        $this->stdout(sprintf("%s portal caches: published %d, last 7 filing days %d, latest filing day %s\n",
+            gmdate('Y-m-d H:i:s'), $portal['total'], $portal['week'], $portal['latest'] ?? '-'), Console::FG_GREEN);
         return ExitCode::OK;
     }
 }

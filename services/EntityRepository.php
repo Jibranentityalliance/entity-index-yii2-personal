@@ -22,6 +22,11 @@ class EntityRepository
         'la', 'of', 'on', 'or', 'that', 'the', 'this', 'to', 'was', 'what', 'when', 'where', 'who', 'will', 'with', 'und', 'www'];
 
     private const CACHE_TTL = 300;
+    private const COUNT_CAP = 100000;
+    private const WARM_TTL = 900;
+    private const FILTERS = ['q', 'state', 'type', 'status', 'county', 'from', 'to', 'basic'];
+
+    private static bool $refreshing = false;
 
     /**
      * @param array{q?:?string,state?:?string,type?:?string,status?:?string,county?:?string,from?:?string,to?:?string,basic?:bool,page?:int,pageSize?:int} $p
@@ -29,6 +34,7 @@ class EntityRepository
      */
     public static function search(array $p): array
     {
+        $filters = array_filter(array_intersect_key($p, array_flip(self::FILTERS)), fn($v) => $v !== null && $v !== '' && $v !== false);
         $q = self::filteredQuery($p, $key);
         $q->select(self::SUMMARY_COLS);
         $order = ['e.filed_at' => SORT_DESC];
@@ -39,7 +45,8 @@ class EntityRepository
             $orderParams = [':ukey' => $key, ':starts' => addcslashes($norm, '%_\\') . '%'];
             $order = '(CASE WHEN e.url_key = :ukey THEN 3 WHEN e.name LIKE :starts THEN 2 ELSE 1 END) DESC, e.filed_at DESC';
         }
-        return self::paginate($q, $order, $p['page'] ?? 1, $p['pageSize'] ?? 25, $orderParams);
+        $total = array_diff_key($filters, ['basic' => 1]) ? null : self::totalCount();
+        return self::paginate($q, $order, $p['page'] ?? 1, $p['pageSize'] ?? 25, $orderParams, $total, 'ei.count.' . md5(json_encode($filters)));
     }
 
     public static function published(string $alias = ''): array
@@ -75,30 +82,53 @@ class EntityRepository
         $key = null;
         if ($terms) {
             $key = preg_replace('/[^a-z0-9]/', '', strtolower($p['q']));
-            $nameMatch = self::termsCondition('e.name', $terms, 'n');
-            $agentMatch = new Expression('EXISTS (SELECT 1 FROM registered_agents ra WHERE ra.id = e.registered_agent_id AND e.people_hidden = 0 AND ' . self::termsSql('ra.name', $terms, 'a', $params2) . ')', $params2);
-            $conds = ['or', $nameMatch, $agentMatch];
-            if (empty($p['basic'])) {
-                $conds[] = new Expression('EXISTS (SELECT 1 FROM people pe WHERE pe.entity_id = e.id AND e.people_hidden = 0 AND ' . self::termsSql('pe.name', $terms, 'p', $params1) . ')', $params1);
+            $matches = self::keywordMatches($p['q'], empty($p['basic']));
+            if ($matches !== null) {
+                $q->select('e.*')->innerJoin(['m' => $matches], 'm.id = e.id AND (m.via = 0 OR e.people_hidden = 0)');
+            } else {
+                $conds = ['or', self::termsCondition('e.name', $terms, 'n')];
+                if (strlen($key) >= 5) {
+                    $conds[] = ['e.url_key' => $key];
+                }
+                $q->andWhere($conds);
             }
-            if (strlen($key) >= 5) {
-                $conds[] = ['e.url_key' => $key];
-            }
-            $q->andWhere($conds);
         }
         return $q;
+    }
+
+    public static function keywordMatches(string $text, bool $people = true, int $minKey = 5): ?Query
+    {
+        $norm = self::normalize($text);
+        $terms = $norm === '' ? [] : explode(' ', $norm);
+        if (!array_filter($terms, fn(string $t) => self::fulltextTerm($t))) {
+            return null;
+        }
+        $key = preg_replace('/[^a-z0-9]/', '', strtolower($text));
+        $union = (new Query())->select(['id' => 'n.id', 'via' => new Expression('0')])->from(['n' => 'entities'])
+            ->where(self::termsCondition('n.name', $terms, 'kn'));
+        $union->union((new Query())->select(['id' => 'ae.id', 'via' => new Expression('1')])->from(['ra' => 'registered_agents'])
+            ->innerJoin(['ae' => 'entities'], 'ae.registered_agent_id = ra.id')->where(self::termsCondition('ra.name', $terms, 'ka')), true);
+        if ($people) {
+            $union->union((new Query())->select(['id' => 'pe.entity_id', 'via' => new Expression('1')])->from(['pe' => 'people'])
+                ->where(self::termsCondition('pe.name', $terms, 'kp')), true);
+        }
+        if (strlen($key) >= $minKey) {
+            $union->union((new Query())->select(['id' => 'k.id', 'via' => new Expression('0')])->from(['k' => 'entities'])
+                ->where(['k.url_key' => $key]), true);
+        }
+        return (new Query())->select(['id', 'via' => 'MIN(via)'])->from(['u' => $union])->groupBy('id');
     }
 
     /** Most recent calendar day (YYYY-MM-DD, UTC) that has any filings, optionally per state. */
     public static function latestFilingDay(?string $state = null): ?string
     {
         $key = 'ei.latestday.' . ($state ?? 'all');
-        return self::remember($key, function () use ($state) {
-            $q = (new Query())->from('entities')->where(self::published());
+        return self::remember($key, ttl: $state === null ? self::WARM_TTL : self::CACHE_TTL, fn: function () use ($state) {
+            $q = (new Query())->select('filed_at')->from('entities')->where(self::published())->andWhere(['not', ['filed_at' => null]]);
             if ($state) {
                 $q->andWhere(['state' => strtoupper($state)]);
             }
-            $max = $q->max('filed_at');
+            $max = $q->orderBy(['filed_at' => SORT_DESC])->limit(1)->scalar();
             return $max ? substr($max, 0, 10) : null;
         });
     }
@@ -110,7 +140,7 @@ class EntityRepository
      */
     public static function stateStats(): array
     {
-        return self::remember('ei.statestats', function () {
+        return self::remember('ei.statestats', ttl: self::WARM_TTL, fn: function () {
             $latest = self::latestFilingDay();
             $stats = [];
             $totals = (new Query())->select(['state', 'total' => 'COUNT(*)', 'last' => 'MAX(indexed_at)'])->from('entities')->where(self::published())->groupBy('state')->all();
@@ -161,7 +191,7 @@ class EntityRepository
             'to' => $latest,
             'companies' => array_sum(array_column($stats, 'last7Days')),
             'states' => count(array_intersect_key($active, States::all())),
-            'addresses' => (int) self::remember('ei.weekaddresses', function () {
+            'addresses' => (int) self::remember('ei.weekaddresses', ttl: self::WARM_TTL, fn: function () {
                 $latest = self::latestFilingDay();
                 if (!$latest) {
                     return 0;
@@ -199,7 +229,18 @@ class EntityRepository
 
     public static function totalCount(): int
     {
-        return (int) self::remember('ei.total', fn() => (new Query())->from('entities')->where(self::published())->count());
+        return (int) self::remember('ei.total', ttl: self::WARM_TTL, fn: fn() => (new Query())->from('entities')->where(self::published())->count());
+    }
+
+    public static function warmCaches(): array
+    {
+        self::$refreshing = true;
+        try {
+            $week = self::weekOverview();
+            return ['total' => self::totalCount(), 'week' => $week['companies'], 'latest' => $week['to']];
+        } finally {
+            self::$refreshing = false;
+        }
     }
 
     public static function find(string $state, string $urlKey): ?Entity
@@ -233,13 +274,19 @@ class EntityRepository
         return Entity::find()->alias('e')->asArray()->andWhere(self::published('e'));
     }
 
-    private static function paginate(ActiveQuery $q, array|string $order, $page, $pageSize, array $orderParams = []): array
+    private static function paginate(ActiveQuery $q, array|string $order, $page, $pageSize, array $orderParams, ?int $total, string $countKey): array
     {
         $pageSize = min(max((int) $pageSize, 1), 100);
         $page = max((int) $page, 1);
-        $total = (int) (clone $q)->select('COUNT(*)')->orderBy(null)->scalar();
+        $more = false;
+        if ($total === null) {
+            $n = (int) self::remember($countKey, fn() => (new Query())
+                ->from(['c' => (clone $q)->select('e.id')->orderBy(null)->limit(self::COUNT_CAP + 1)])->count());
+            $more = $n > self::COUNT_CAP;
+            $total = min($n, self::COUNT_CAP);
+        }
         $items = $q->orderBy($order)->addParams($orderParams)->offset(($page - 1) * $pageSize)->limit($pageSize)->all();
-        return ['total' => $total, 'page' => $page, 'pageSize' => $pageSize, 'items' => $items];
+        return ['total' => $total, 'more' => $more, 'page' => $page, 'pageSize' => $pageSize, 'items' => $items];
     }
 
     /** Lowercase, letters and digits only, single spaces. Also strips FULLTEXT operators. */
@@ -257,13 +304,18 @@ class EntityRepository
      * SQL requiring every term to match `$col`: FULLTEXT prefix match for normal words,
      * LIKE for short words and InnoDB stopwords (which FULLTEXT would silently ignore).
      */
+    private static function fulltextTerm(string $t): bool
+    {
+        return strlen($t) >= 3 && !in_array($t, self::FT_STOPWORDS, true);
+    }
+
     private static function termsSql(string $col, array $terms, string $prefix, &$params): string
     {
         $params = [];
         $parts = [];
         foreach ($terms as $i => $t) {
             $ph = ":{$prefix}{$i}";
-            if (strlen($t) < 3 || in_array($t, self::FT_STOPWORDS, true)) {
+            if (!self::fulltextTerm($t)) {
                 $parts[] = "$col LIKE $ph";
                 $params[$ph] = '%' . addcslashes($t, '%_\\') . '%';
             } else {
@@ -284,15 +336,15 @@ class EntityRepository
         return (new \DateTimeImmutable($day, new \DateTimeZone('UTC')))->modify('+1 day')->format('Y-m-d') . ' 00:00:00';
     }
 
-    private static function remember(string $key, callable $fn)
+    private static function remember(string $key, callable $fn, int $ttl = self::CACHE_TTL)
     {
         $cache = Yii::$app->cache;
-        $hit = $cache->get($key);
+        $hit = self::$refreshing ? false : $cache->get($key);
         if ($hit !== false) {
             return $hit === '__null__' ? null : $hit;
         }
         $val = $fn();
-        $cache->set($key, $val ?? '__null__', self::CACHE_TTL);
+        $cache->set($key, $val ?? '__null__', $ttl);
         return $val;
     }
 }

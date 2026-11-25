@@ -24,6 +24,7 @@ use yii\helpers\Inflector;
 class MirrorConverter
 {
     public const CURSOR = 'backfill_cursor';
+    public const APPLIED = 'apply_last_change';
     private const ENTITY_COLS = ['source_id', 'state', 'state_filing_number', 'url_key', 'slug', 'name', 'entity_type', 'status',
         'formation_date', 'filed_at', 'indexed_at', 'publish_at', 'source_url'];
 
@@ -89,6 +90,7 @@ class MirrorConverter
                     $this->deleteSource($id);
                 }
                 $this->db->createCommand('DELETE FROM mirror_changes WHERE id <= :id', [':id' => (int) end($changes)['id']])->execute();
+                $this->setState(self::APPLIED, (int) end($changes)['id']);
                 $tx->commit();
             } catch (\Throwable $e) {
                 $tx->rollBack();

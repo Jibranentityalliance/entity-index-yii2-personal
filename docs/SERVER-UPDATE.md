@@ -22,13 +22,14 @@ sudo -u www-data php yii migrate --interactive=0
 sudo -u www-data php yii cache/flush-all
 ```
 
-Three new migrations:
+Four new migrations:
 
 | Migration | Adds |
 |---|---|
 | `m261125_000001_create_webhooks` | `webhook_endpoint`, `webhook_event`, `webhook_delivery` |
 | `m261126_000001_add_bulk_file_kind` | `bulk_file.kind` (full, daily, weekly) and a new unique index |
 | `m261127_000001_create_saved_search` | `saved_search` |
+| `m261128_000001_add_entities_query_indexes` | Query indexes on `entities`: state and entity type, state and county by filing date, state and publish time, filing number (`url_key`), and publish time with indexed time. Replaces two narrower indexes. Built online, without locking the table: several minutes on 6 million rows, during which the site keeps working. Check free disk space first; the new indexes take roughly 1 GB. |
 
 ## 3. `.env`
 
@@ -53,10 +54,11 @@ After editing: `sudo -u www-data php yii cache/flush-all`, then `sudo -u www-dat
 ## 5. Cron
 
 Cron jobs that are new or changed since `c5dcb99`, for the web user's crontab (`sudo crontab -u www-data -e`). Add `webhooks/run` and `alerts/send`.
-`bulk/build` should already be there with this exact line; it is listed because it now does more. Leave every other existing job as it is.
+`stats/refresh` and `bulk/build` should already be there with these exact lines; they are listed because they now do more. Leave every other existing job as it is.
 
 ```cron
 * * * * * cd /var/www/entityindex && php yii webhooks/run >> runtime/logs/webhooks.log 2>&1
+*/5 * * * * cd /var/www/entityindex && php yii stats/refresh >> runtime/logs/stats.log 2>&1
 30 3 * * * cd /var/www/entityindex && php yii bulk/build >> runtime/logs/bulk.log 2>&1
 CRON_TZ=America/New_York
 0 7 * * * cd /var/www/entityindex && php yii alerts/send >> runtime/logs/alerts.log 2>&1
@@ -65,6 +67,7 @@ CRON_TZ=America/New_York
 | Job | Schedule | Since `c5dcb99` | What it does |
 |---|---|---|---|
 | `webhooks/run` | every minute | **new** | Sends newly published companies to customer webhook endpoints and retries failed deliveries. |
+| `stats/refresh` | every 5 minutes | existing, does more | Now also rebuilds the portal dashboard and States page numbers ahead of time, so no visitor waits for them. Must run as the web user, because it writes to the same cache. |
 | `bulk/build` | 03:30 UTC daily | existing, does more | Full bulk files, and now also the daily (last 7 days) and weekly (last 4 weeks) new-company files, which adds seconds. Run it when the site is quiet. |
 | `alerts/send` | 07:00 New York time daily | **new** | Emails each saved search's new matches. A second run the same day sends nothing. |
 

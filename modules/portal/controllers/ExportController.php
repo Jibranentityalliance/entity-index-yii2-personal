@@ -30,30 +30,30 @@ class ExportController extends PortalController
         }
         $params = $this->companyFilters(Yii::$app->request->post());
         $allowance = ExportUsage::allowance($user);
-        $total = (int) EntityRepository::filteredQuery($params)->select('COUNT(*)')->orderBy(null)->scalar();
         $back = ['/portal/companies/index'] + array_filter($params);
 
-        if ($total === 0) {
+        if ($allowance < 1) {
+            return $this->refuse(EntityRepository::filteredQuery($params)->exists()
+                ? 'You have used all of this month\'s export rows. The allowance resets on the 1st (UTC).'
+                : 'No companies match these filters, so there is nothing to export.', $back);
+        }
+        $ids = EntityRepository::filteredQuery($params)->select('e.id')
+            ->orderBy(['e.filed_at' => SORT_DESC, 'e.id' => SORT_DESC])->limit($allowance)->column();
+        if (!$ids) {
             return $this->refuse('No companies match these filters, so there is nothing to export.', $back);
         }
-        if ($allowance < 1) {
-            return $this->refuse('You have used all of this month\'s export rows. The allowance resets on the 1st (UTC).', $back);
-        }
 
-        $rows = min($total, $allowance);
         $fp = fopen('php://temp', 'w+');
         fwrite($fp, "\xEF\xBB\xBF");
         fputcsv($fp, CompanyCsv::COLUMNS, ',', '"', '');
         $written = 0;
-        for ($offset = 0; $offset < $rows; $offset += self::CHUNK) {
-            $batch = EntityRepository::filteredQuery($params)->with(['people', 'agent'])
-                ->orderBy(['e.filed_at' => SORT_DESC, 'e.id' => SORT_DESC])->offset($offset)->limit(min(self::CHUNK, $rows - $offset))->all();
-            if (!$batch) {
-                break;
-            }
-            foreach ($batch as $e) {
-                fputcsv($fp, CompanyCsv::line(EntitySerializer::entity($e)), ',', '"', '');
-                $written++;
+        foreach (array_chunk($ids, self::CHUNK) as $chunk) {
+            $rows = EntityRepository::filteredQuery([])->with(['people', 'agent'])->andWhere(['e.id' => $chunk])->indexBy('id')->all();
+            foreach ($chunk as $id) {
+                if (isset($rows[$id])) {
+                    fputcsv($fp, CompanyCsv::line(EntitySerializer::entity($rows[$id])), ',', '"', '');
+                    $written++;
+                }
             }
         }
         ExportUsage::add($user, $written);
